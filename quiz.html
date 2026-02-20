@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StudyPulse — AI Quiz Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #7c6aff;
+    --accent2: #ff6a9b;
+    --accent3: #6affca;
+    --text: #f0eeff;
+    --muted: #7a7a9a;
+    --correct: #22c97a;
+    --wrong: #ff4f6e;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background mesh */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, rgba(124,106,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 80% 80%, rgba(255,106,155,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 60% 10%, rgba(106,255,202,0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 40px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .logo {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .card-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  /* API Key section */
+  .api-section {
+    animation: fadeUp 0.5s ease 0.05s both;
+  }
+
+  .api-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .api-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .api-status.active { background: var(--correct); box-shadow: 0 0 8px var(--correct); }
+
+  /* Inputs */
+  input[type="text"], input[type="password"], input[type="number"], textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.15);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 220px;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  input[type="number"] { width: 100px; }
+
+  /* Setup row */
+  .setup-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  /* Buttons */
+  .btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 13px 28px;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #9b5cff);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(124,106,255,0.35);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(124,106,255,0.45);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+
+  .btn-ghost:hover { color: var(--text); }
+
+  /* Loading */
+  .loading-screen {
+    text-align: center;
+    padding: 80px 20px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 24px;
+  }
+
+  .loading-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .loading-sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: var(--surface2);
+    border-radius: 99px;
+    height: 6px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .progress-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  /* Question card */
+  .question-card {
+    animation: fadeUp 0.35s ease both;
+  }
+
+  .question-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .question-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 28px;
+  }
+
+  /* Answer choices */
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .choice {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.18s;
+    font-size: 15px;
+    line-height: 1.45;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .choice:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.08);
+    transform: translateX(4px);
+  }
+
+  .choice:disabled { cursor: default; }
+
+  .choice-letter {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: all 0.18s;
+  }
+
+  .choice.correct {
+    border-color: var(--correct);
+    background: rgba(34,201,122,0.1);
+  }
+
+  .choice.correct .choice-letter {
+    background: var(--correct);
+    color: #000;
+  }
+
+  .choice.wrong {
+    border-color: var(--wrong);
+    background: rgba(255,79,110,0.1);
+  }
+
+  .choice.wrong .choice-letter {
+    background: var(--wrong);
+    color: #fff;
+  }
+
+  .choice.reveal-correct {
+    border-color: var(--correct);
+    background: rgba(34,201,122,0.06);
+  }
+
+  .choice.reveal-correct .choice-letter {
+    background: var(--correct);
+    color: #000;
+  }
+
+  .choice-icon {
+    margin-left: auto;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Feedback bubble */
+  .feedback {
+    margin-top: 20px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeUp 0.25s ease both;
+  }
+
+  .feedback.correct-fb {
+    background: rgba(34,201,122,0.12);
+    border: 1px solid rgba(34,201,122,0.3);
+    color: #6effc0;
+  }
+
+  .feedback.wrong-fb {
+    background: rgba(255,79,110,0.12);
+    border: 1px solid rgba(255,79,110,0.3);
+    color: #ff8fa8;
+  }
+
+  /* Next button row */
+  .next-row {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+    animation: fadeUp 0.3s ease 0.1s both;
+  }
+
+  /* Results screen */
+  .results-header {
+    text-align: center;
+    padding: 40px 20px 32px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .results-emoji {
+    font-size: 52px;
+    margin-bottom: 16px;
+  }
+
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .results-sub {
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 8px 20px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    margin-top: 16px;
+  }
+
+  .score-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Review list */
+  .review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .review-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .review-item.r-correct { border-left: 3px solid var(--correct); }
+  .review-item.r-wrong { border-left: 3px solid var(--wrong); }
+
+  .review-q {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .review-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  .review-answers {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13px;
+  }
+
+  .review-correct-ans {
+    color: #6effc0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .review-wrong-ans {
+    color: #ff8fa8;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Results actions */
+  .results-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 12px;
+    padding-bottom: 40px;
+  }
+
+  /* Error */
+  .error-box {
+    background: rgba(255,79,110,0.1);
+    border: 1px solid rgba(255,79,110,0.35);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14px;
+    color: #ff8fa8;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .error-box.show { display: block; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Screens */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  /* Mobile */
+  @media (max-width: 560px) {
+    .question-text { font-size: 17px; }
+    .choice { font-size: 14px; padding: 14px 16px; }
+    .results-title { font-size: 22px; }
+    .setup-row { flex-direction: column; align-items: flex-start; }
+    input[type="number"] { width: 100%; }
+  }
+
+  /* Tooltip for key toggle */
+  .key-toggle {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    flex-shrink: 0;
+  }
+  .key-toggle:hover { color: var(--text); }
+
+  .section-anim { animation: fadeUp 0.5s ease 0.1s both; }
+  .section-anim-2 { animation: fadeUp 0.5s ease 0.2s both; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">⚡</div>
+    <div class="logo-text"><span>Study</span>Pulse</div>
+  </div>
+
+  <!-- SETUP SCREEN -->
+  <div id="screen-setup" class="screen active">
+
+    <!-- API Key -->
+    <div class="card api-section">
+      <div class="card-label">API Key</div>
+      <div class="api-row">
+        <div class="api-status" id="api-status"></div>
+        <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="flex:1" />
+        <button class="key-toggle" id="key-toggle" title="Show/hide key">👁</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Your key is only kept in memory and never stored.</div>
+    </div>
+
+    <!-- Content -->
+    <div class="card section-anim">
+      <div class="card-label">Study Content</div>
+      <textarea id="content-input" placeholder="Paste your notes, slide content, article, or any text here. Claude will read it and generate quiz questions based on the material…"></textarea>
+    </div>
+
+    <!-- Settings -->
+    <div class="card section-anim-2">
+      <div class="card-label">Quiz Settings</div>
+      <div class="setup-row">
+        <div class="field-group" style="flex:1">
+          <div class="field-label">Number of questions</div>
+          <input type="number" id="num-questions" value="10" min="3" max="25" />
+        </div>
+        <div class="field-group" style="flex:1">
+          <div class="field-label">Difficulty</div>
+          <select id="difficulty" style="width:100%">
+            <option value="standard">Standard</option>
+            <option value="challenging">Challenging</option>
+            <option value="easy">Easy</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <button class="btn btn-primary" id="generate-btn" onclick="generateQuiz()">Generate Quiz ⚡</button>
+        </div>
+      </div>
+      <div class="error-box" id="setup-error"></div>
+    </div>
+
+  </div>
+
+  <!-- LOADING SCREEN -->
+  <div id="screen-loading" class="screen">
+    <div class="loading-screen">
+      <div class="spinner"></div>
+      <div class="loading-title">Generating your quiz…</div>
+      <div class="loading-sub">Claude is reading your content and crafting questions.</div>
+    </div>
+  </div>
+
+  <!-- QUIZ SCREEN -->
+  <div id="screen-quiz" class="screen">
+
+    <div class="progress-label">
+      <span class="progress-text" id="progress-text">Question 1 of 10</span>
+      <button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <div id="question-area"></div>
+
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div id="screen-results" class="screen">
+
+    <div class="results-header">
+      <div class="results-emoji" id="results-emoji">🎉</div>
+      <div class="results-title" id="results-title">Quiz Complete!</div>
+      <div class="results-sub" id="results-sub">Here's how you did:</div>
+      <div class="score-badge">
+        <div class="score-dot" id="score-dot"></div>
+        <span id="score-text"></span>
+      </div>
+    </div>
+
+    <div class="review-list" id="review-list"></div>
+
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="tryAgain()">🔄 New Questions, Same Topic</button>
+      <button class="btn btn-secondary" onclick="resetToSetup()">📝 New Content</button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let questions = [];
+let currentQ = 0;
+let answered = false;
+let userAnswers = [];
+let savedContent = '';
+let savedNumQ = 10;
+let savedDifficulty = 'standard';
+
+// ─── API Key UX ──────────────────────────────────────────────────────────────
+const keyInput = document.getElementById('api-key-input');
+const keyStatus = document.getElementById('api-status');
+const keyToggle = document.getElementById('key-toggle');
+let keyVisible = false;
+
+keyInput.addEventListener('input', () => {
+  const val = keyInput.value.trim();
+  keyStatus.className = 'api-status' + (val.startsWith('sk-ant') ? ' active' : '');
+});
+
+keyToggle.addEventListener('click', () => {
+  keyVisible = !keyVisible;
+  keyInput.type = keyVisible ? 'text' : 'password';
+  keyToggle.textContent = keyVisible ? '🙈' : '👁';
+});
+
+// ─── Screen switcher ─────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ─── Generate Quiz ───────────────────────────────────────────────────────────
+async function generateQuiz() {
+  const apiKey = keyInput.value.trim();
+  const content = document.getElementById('content-input').value.trim();
+  const numQ = parseInt(document.getElementById('num-questions').value) || 10;
+  const difficulty = document.getElementById('difficulty').value;
+  const errBox = document.getElementById('setup-error');
+
+  errBox.classList.remove('show');
+
+  if (!apiKey) return showError(errBox, 'Please enter your Anthropic API key.');
+  if (!apiKey.startsWith('sk-ant')) return showError(errBox, 'That doesn\'t look like a valid Anthropic key (should start with sk-ant…).');
+  if (!content || content.length < 50) return showError(errBox, 'Please paste some study content — at least a few sentences.');
+
+  savedContent = content;
+  savedNumQ = numQ;
+  savedDifficulty = difficulty;
+
+  await runGeneration(apiKey, content, numQ, difficulty);
+}
+
+async function runGeneration(apiKey, content, numQ, difficulty) {
+  showScreen('screen-loading');
+
+  const difficultyNote = {
+    easy: 'Make the questions straightforward with clearly distinct answer choices. Target students encountering the material for the first time.',
+    standard: 'Mix of recall and comprehension questions. Distractors should be plausible but clearly wrong to someone who studied.',
+    challenging: 'Focus on deeper comprehension and application. Distractors should be very plausible — a student must truly understand the material to distinguish them.'
+  }[difficulty];
+
+  const prompt = `You are an expert quiz writer. Given the study content below, generate exactly ${numQ} multiple-choice questions.
+
+DIFFICULTY: ${difficulty.toUpperCase()}
+${difficultyNote}
+
+CRITICAL RULES FOR DISTRACTORS (wrong answers):
+1. Each distractor must be the SAME TYPE as the correct answer (e.g., if the answer is a process name, all distractors are process names from the same domain).
+2. Distractors must be plausible — a student who hasn't studied might pick them, but someone who studied carefully would know they're wrong.
+3. Distractors must NOT be obviously silly, unrelated, or from a completely different topic.
+4. Distractors should be roughly the same length and grammatical structure as the correct answer.
+5. Never use "All of the above" or "None of the above".
+6. Do NOT repeat the same distractor across questions.
+
+OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no code fences, no explanation. Just the raw JSON array.
+
+[
+  {
+    "question": "Question text here?",
+    "correct": "The correct answer",
+    "distractors": ["Wrong but plausible 1", "Wrong but plausible 2", "Wrong but plausible 3"]
+  }
+]
+
+STUDY CONTENT:
+${content.slice(0, 12000)}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    let raw = data.content?.[0]?.text || '';
+
+    // Strip any accidental markdown fences
+    raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch(e) {
+      // Try to extract JSON array from the response
+      const match = raw.match(/\[[\s\S]*\]/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not parse quiz data from response.');
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('Received empty or invalid quiz data.');
+    }
+
+    // Build shuffled questions
+    questions = parsed.map(q => {
+      const choices = [q.correct, ...q.distractors].sort(() => Math.random() - 0.5);
+      return { question: q.question, correct: q.correct, choices };
+    });
+
+    userAnswers = new Array(questions.length).fill(null);
+    currentQ = 0;
+    answered = false;
+
+    showScreen('screen-quiz');
+    renderQuestion();
+
+  } catch(err) {
+    showScreen('screen-setup');
+    const errBox = document.getElementById('setup-error');
+    showError(errBox, '⚠️ ' + err.message);
+  }
+}
+
+// ─── Quiz Rendering ──────────────────────────────────────────────────────────
+function renderQuestion() {
+  const q = questions[currentQ];
+  const total = questions.length;
+
+  document.getElementById('progress-text').textContent = `Question ${currentQ + 1} of ${total}`;
+  document.getElementById('progress-fill').style.width = `${(currentQ / total) * 100}%`;
+
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const area = document.getElementById('question-area');
+
+  area.innerHTML = `
+    <div class="card question-card">
+      <div class="question-number">Question ${currentQ + 1} / ${total}</div>
+      <div class="question-text">${escapeHtml(q.question)}</div>
+      <div class="choices" id="choices">
+        ${q.choices.map((c, i) => `
+          <button class="choice" id="choice-${i}" onclick="selectAnswer(${i})">
+            <div class="choice-letter">${letters[i]}</div>
+            <div>${escapeHtml(c)}</div>
+          </button>
+        `).join('')}
+      </div>
+      <div id="feedback-area"></div>
+    </div>
+    <div class="next-row" id="next-row" style="display:none">
+      <button class="btn btn-primary" onclick="nextQuestion()">
+        ${currentQ + 1 === total ? 'See Results 🎯' : 'Next Question →'}
+      </button>
+    </div>
+  `;
+
+  answered = false;
+}
+
+function selectAnswer(idx) {
+  if (answered) return;
+  answered = true;
+
+  const q = questions[currentQ];
+  const chosen = q.choices[idx];
+  const isCorrect = chosen === q.correct;
+  const correctIdx = q.choices.indexOf(q.correct);
+
+  userAnswers[currentQ] = { chosen, isCorrect };
+
+  // Disable all buttons
+  q.choices.forEach((_, i) => {
+    document.getElementById(`choice-${i}`).disabled = true;
+  });
+
+  // Mark chosen
+  const chosenBtn = document.getElementById(`choice-${idx}`);
+  chosenBtn.classList.add(isCorrect ? 'correct' : 'wrong');
+  chosenBtn.querySelector('.choice-icon')?.remove();
+  const icon = document.createElement('span');
+  icon.className = 'choice-icon';
+  icon.textContent = isCorrect ? '✓' : '✗';
+  chosenBtn.appendChild(icon);
+
+  // If wrong, reveal correct
+  if (!isCorrect) {
+    const correctBtn = document.getElementById(`choice-${correctIdx}`);
+    correctBtn.classList.add('reveal-correct');
+    const cIcon = document.createElement('span');
+    cIcon.className = 'choice-icon';
+    cIcon.textContent = '✓';
+    correctBtn.appendChild(cIcon);
+  }
+
+  // Feedback
+  const fb = document.getElementById('feedback-area');
+  fb.innerHTML = `
+    <div class="feedback ${isCorrect ? 'correct-fb' : 'wrong-fb'}">
+      <span>${isCorrect ? '✅' : '❌'}</span>
+      <span>${isCorrect
+        ? 'Correct! Great job.'
+        : `Not quite. The correct answer is: <strong>${escapeHtml(q.correct)}</strong>`
+      }</span>
+    </div>
+  `;
+
+  document.getElementById('next-row').style.display = 'flex';
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ─── Results ─────────────────────────────────────────────────────────────────
+function showResults() {
+  const total = questions.length;
+  const correct = userAnswers.filter(a => a?.isCorrect).length;
+  const pct = Math.round((correct / total) * 100);
+
+  // Emoji + title
+  let emoji = '😓', title = 'Keep Studying!';
+  if (pct >= 90) { emoji = '🏆'; title = 'Outstanding!'; }
+  else if (pct >= 75) { emoji = '🎉'; title = 'Great Work!'; }
+  else if (pct >= 60) { emoji = '👍'; title = 'Getting There!'; }
+  else if (pct >= 40) { emoji = '📚'; title = 'Keep Practicing!'; }
+
+  document.getElementById('results-emoji').textContent = emoji;
+  document.getElementById('results-title').textContent = title;
+  document.getElementById('results-sub').textContent = `You answered ${correct} out of ${total} correctly.`;
+  document.getElementById('score-text').textContent = `${correct} / ${total} — ${pct}%`;
+
+  const dot = document.getElementById('score-dot');
+  dot.style.background = pct >= 75 ? 'var(--correct)' : pct >= 50 ? '#ffb347' : 'var(--wrong)';
+
+  // Review list
+  const list = document.getElementById('review-list');
+  list.innerHTML = questions.map((q, i) => {
+    const ans = userAnswers[i];
+    const ok = ans?.isCorrect;
+    return `
+      <div class="review-item ${ok ? 'r-correct' : 'r-wrong'}" style="animation-delay:${i * 0.04}s">
+        <div class="review-q">
+          <span class="review-icon">${ok ? '✅' : '❌'}</span>
+          <span>${escapeHtml(q.question)}</span>
+        </div>
+        <div class="review-answers">
+          <div class="review-correct-ans">✓ ${escapeHtml(q.correct)}</div>
+          ${!ok && ans ? `<div class="review-wrong-ans">✗ You answered: ${escapeHtml(ans.chosen)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Update progress to full
+  document.getElementById('progress-fill').style.width = '100%';
+
+  showScreen('screen-results');
+}
+
+// ─── Try Again (same content, new questions) ─────────────────────────────────
+async function tryAgain() {
+  const apiKey = keyInput.value.trim();
+  if (!apiKey) {
+    alert('Please re-enter your API key on the setup screen.');
+    resetToSetup();
+    return;
+  }
+  await runGeneration(apiKey, savedContent, savedNumQ, savedDifficulty);
+}
+
+// ─── Reset ───────────────────────────────────────────────────────────────────
+function resetToSetup() {
+  showScreen('screen-setup');
+  questions = [];
+  userAnswers = [];
+  currentQ = 0;
+  answered = false;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function showError(el, msg) {
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
