@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>StudyPulse — AI Quiz Generator</title>
+<title>StudyPulse — AI Quiz & Flashcard Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
 <style>
   :root {
@@ -31,7 +31,6 @@
     overflow-x: hidden;
   }
 
-  /* Background mesh */
   body::before {
     content: '';
     position: fixed;
@@ -52,7 +51,7 @@
     padding: 32px 20px 80px;
   }
 
-  /* Header */
+  /* ── Header ── */
   .header {
     display: flex;
     align-items: center;
@@ -60,34 +59,52 @@
     margin-bottom: 40px;
     animation: fadeUp 0.5s ease both;
   }
-
   .logo {
-    width: 40px;
-    height: 40px;
+    width: 40px; height: 40px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
   }
-
-  .logo-text {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 22px;
-    letter-spacing: -0.5px;
-  }
-
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
   .logo-text span {
     background: linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
 
-  /* Cards */
+  /* ── Mode Toggle ── */
+  .mode-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.5s ease 0.03s both;
+  }
+  .mode-btn {
+    flex: 1;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    border-radius: 9px;
+    padding: 10px 16px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .mode-btn.active {
+    background: linear-gradient(135deg, var(--accent), #9b5cff);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(124,106,255,0.35);
+  }
+  .mode-btn:not(.active):hover { color: var(--text); }
+
+  /* ── Cards ── */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -95,40 +112,27 @@
     padding: 28px;
     margin-bottom: 20px;
   }
-
   .card-label {
     font-family: 'Syne', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 12px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px;
   }
 
-  /* API Key section */
-  .api-section {
-    animation: fadeUp 0.5s ease 0.05s both;
-  }
-
-  .api-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-
+  /* ── API Key ── */
+  .api-row { display: flex; gap: 10px; align-items: center; }
   .api-status {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    flex-shrink: 0;
-    transition: background 0.3s;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0; transition: background 0.3s;
   }
-
   .api-status.active { background: var(--correct); box-shadow: 0 0 8px var(--correct); }
+  .key-toggle {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 18px; padding: 4px; flex-shrink: 0;
+  }
+  .key-toggle:hover { color: var(--text); }
 
-  /* Inputs */
+  /* ── Inputs ── */
   input[type="text"], input[type="password"], input[type="number"], textarea, select {
     width: 100%;
     background: var(--surface2);
@@ -141,455 +145,286 @@
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
-
   input:focus, textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(124,106,255,0.15);
   }
-
-  textarea {
-    resize: vertical;
-    min-height: 220px;
-    line-height: 1.6;
-    font-size: 14px;
-  }
-
+  textarea { resize: vertical; min-height: 200px; line-height: 1.6; font-size: 14px; }
   input[type="number"] { width: 100px; }
 
-  /* Setup row */
+  /* ── Load session strip ── */
+  .load-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.5s ease 0.06s both;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .load-strip:hover { border-color: var(--accent); }
+  .load-strip input[type="file"] { display: none; }
+  .load-strip-icon { font-size: 22px; flex-shrink: 0; }
+  .load-strip-text { flex: 1; }
+  .load-strip-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+  .load-strip-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Setup row ── */
   .setup-row {
-    display: flex;
-    gap: 20px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    margin-top: 16px;
+    display: flex; gap: 20px;
+    align-items: flex-end; flex-wrap: wrap; margin-top: 16px;
   }
+  .field-group { display: flex; flex-direction: column; gap: 8px; }
+  .field-label { font-size: 13px; font-weight: 500; color: var(--muted); }
 
-  .field-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .field-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--muted);
-  }
-
-  /* Buttons */
+  /* ── Buttons ── */
   .btn {
     font-family: 'Syne', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    padding: 13px 28px;
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
+    font-size: 15px; font-weight: 700;
+    border: none; border-radius: 10px;
+    cursor: pointer; padding: 13px 28px;
+    transition: all 0.2s; letter-spacing: 0.3px; white-space: nowrap;
   }
-
   .btn-primary {
     background: linear-gradient(135deg, var(--accent), #9b5cff);
-    color: #fff;
-    box-shadow: 0 4px 20px rgba(124,106,255,0.35);
+    color: #fff; box-shadow: 0 4px 20px rgba(124,106,255,0.35);
   }
-
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(124,106,255,0.45);
-  }
-
-  .btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,106,255,0.45); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-secondary {
-    background: var(--surface2);
-    color: var(--text);
+    background: var(--surface2); color: var(--text);
     border: 1px solid var(--border);
   }
-
-  .btn-secondary:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-teal {
+    background: linear-gradient(135deg, #1a9e78, #12c99a);
+    color: #fff; box-shadow: 0 4px 20px rgba(34,201,122,0.25);
   }
-
+  .btn-teal:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(34,201,122,0.35); }
+  .btn-teal:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-ghost {
-    background: transparent;
-    color: var(--muted);
-    font-size: 13px;
-    padding: 8px 14px;
+    background: transparent; color: var(--muted);
+    font-size: 13px; padding: 8px 14px;
   }
-
   .btn-ghost:hover { color: var(--text); }
+  .btn-sm { padding: 9px 18px; font-size: 13px; }
 
-  /* Loading */
-  .loading-screen {
-    text-align: center;
-    padding: 80px 20px;
-    animation: fadeUp 0.4s ease both;
-  }
-
+  /* ── Loading ── */
+  .loading-screen { text-align: center; padding: 80px 20px; animation: fadeUp 0.4s ease both; }
   .spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 24px;
+    width: 48px; height: 48px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 24px;
   }
+  .loading-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .loading-sub { color: var(--muted); font-size: 14px; }
 
-  .loading-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .loading-sub {
-    color: var(--muted);
-    font-size: 14px;
-  }
-
-  /* Progress bar */
-  .progress-wrap {
-    background: var(--surface2);
-    border-radius: 99px;
-    height: 6px;
-    margin-bottom: 32px;
-    overflow: hidden;
-  }
-
+  /* ── Progress bar ── */
+  .progress-wrap { background: var(--surface2); border-radius: 99px; height: 6px; margin-bottom: 32px; overflow: hidden; }
   .progress-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--accent), var(--accent2));
     border-radius: 99px;
     transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
   }
+  .progress-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .progress-text { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--muted); }
 
-  .progress-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
+  /* ── Question card ── */
+  .question-card { animation: fadeUp 0.35s ease both; }
+  .question-number { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+  .question-text { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.4; margin-bottom: 28px; }
 
-  .progress-text {
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--muted);
-  }
-
-  /* Question card */
-  .question-card {
-    animation: fadeUp 0.35s ease both;
-  }
-
-  .question-number {
-    font-family: 'Syne', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 14px;
-  }
-
-  .question-text {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.4;
-    margin-bottom: 28px;
-  }
-
-  /* Answer choices */
-  .choices {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
+  /* ── Choices ── */
+  .choices { display: flex; flex-direction: column; gap: 12px; }
   .choice {
-    background: var(--surface2);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    transition: all 0.18s;
-    font-size: 15px;
-    line-height: 1.45;
-    text-align: left;
-    width: 100%;
-    color: var(--text);
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 16px 20px;
+    cursor: pointer; display: flex; align-items: center; gap: 14px;
+    transition: all 0.18s; font-size: 15px; line-height: 1.45;
+    text-align: left; width: 100%; color: var(--text);
     font-family: 'DM Sans', sans-serif;
   }
-
-  .choice:hover:not(:disabled) {
-    border-color: var(--accent);
-    background: rgba(124,106,255,0.08);
-    transform: translateX(4px);
-  }
-
+  .choice:hover:not(:disabled) { border-color: var(--accent); background: rgba(124,106,255,0.08); transform: translateX(4px); }
   .choice:disabled { cursor: default; }
-
   .choice-letter {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 32px; height: 32px; border-radius: 8px;
     background: var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    flex-shrink: 0;
-    transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+    flex-shrink: 0; transition: all 0.18s;
   }
+  .choice.correct { border-color: var(--correct); background: rgba(34,201,122,0.1); }
+  .choice.correct .choice-letter { background: var(--correct); color: #000; }
+  .choice.wrong { border-color: var(--wrong); background: rgba(255,79,110,0.1); }
+  .choice.wrong .choice-letter { background: var(--wrong); color: #fff; }
+  .choice.reveal-correct { border-color: var(--correct); background: rgba(34,201,122,0.06); }
+  .choice.reveal-correct .choice-letter { background: var(--correct); color: #000; }
+  .choice-icon { margin-left: auto; font-size: 18px; flex-shrink: 0; }
 
-  .choice.correct {
-    border-color: var(--correct);
-    background: rgba(34,201,122,0.1);
-  }
-
-  .choice.correct .choice-letter {
-    background: var(--correct);
-    color: #000;
-  }
-
-  .choice.wrong {
-    border-color: var(--wrong);
-    background: rgba(255,79,110,0.1);
-  }
-
-  .choice.wrong .choice-letter {
-    background: var(--wrong);
-    color: #fff;
-  }
-
-  .choice.reveal-correct {
-    border-color: var(--correct);
-    background: rgba(34,201,122,0.06);
-  }
-
-  .choice.reveal-correct .choice-letter {
-    background: var(--correct);
-    color: #000;
-  }
-
-  .choice-icon {
-    margin-left: auto;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-
-  /* Feedback bubble */
+  /* ── Feedback ── */
   .feedback {
-    margin-top: 20px;
-    padding: 14px 18px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    margin-top: 20px; padding: 14px 18px; border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
     animation: fadeUp 0.25s ease both;
   }
+  .feedback.correct-fb { background: rgba(34,201,122,0.12); border: 1px solid rgba(34,201,122,0.3); color: #6effc0; }
+  .feedback.wrong-fb { background: rgba(255,79,110,0.12); border: 1px solid rgba(255,79,110,0.3); color: #ff8fa8; }
 
-  .feedback.correct-fb {
-    background: rgba(34,201,122,0.12);
-    border: 1px solid rgba(34,201,122,0.3);
-    color: #6effc0;
-  }
+  .next-row { margin-top: 24px; display: flex; justify-content: flex-end; animation: fadeUp 0.3s ease 0.1s both; }
 
-  .feedback.wrong-fb {
-    background: rgba(255,79,110,0.12);
-    border: 1px solid rgba(255,79,110,0.3);
-    color: #ff8fa8;
-  }
-
-  /* Next button row */
-  .next-row {
-    margin-top: 24px;
-    display: flex;
-    justify-content: flex-end;
-    animation: fadeUp 0.3s ease 0.1s both;
-  }
-
-  /* Results screen */
-  .results-header {
-    text-align: center;
-    padding: 40px 20px 32px;
-    animation: fadeUp 0.4s ease both;
-  }
-
-  .results-emoji {
-    font-size: 52px;
-    margin-bottom: 16px;
-  }
-
-  .results-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    margin-bottom: 8px;
-  }
-
-  .results-sub {
-    color: var(--muted);
-    font-size: 15px;
-  }
-
+  /* ── Results ── */
+  .results-header { text-align: center; padding: 40px 20px 32px; animation: fadeUp 0.4s ease both; }
+  .results-emoji { font-size: 52px; margin-bottom: 16px; }
+  .results-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  .results-sub { color: var(--muted); font-size: 15px; }
   .score-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 99px;
-    padding: 8px 20px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    margin-top: 16px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 99px; padding: 8px 20px;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-top: 16px;
   }
+  .score-dot { width: 10px; height: 10px; border-radius: 50%; }
 
-  .score-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  }
-
-  /* Review list */
-  .review-list {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 28px;
-  }
-
+  .review-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
   .review-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
     animation: fadeUp 0.4s ease both;
   }
-
   .review-item.r-correct { border-left: 3px solid var(--correct); }
   .review-item.r-wrong { border-left: 3px solid var(--wrong); }
-
-  .review-q {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    margin-bottom: 10px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-  }
-
+  .review-q { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; }
   .review-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .review-answers { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+  .review-correct-ans { color: #6effc0; display: flex; gap: 6px; align-items: center; }
+  .review-wrong-ans { color: #ff8fa8; display: flex; gap: 6px; align-items: center; }
 
-  .review-answers {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    font-size: 13px;
+  .results-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+
+  /* ── Study Guide ── */
+  .study-guide-section { margin-top: 28px; animation: fadeUp 0.4s ease both; }
+  .study-guide-content {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px;
+    margin-top: 16px;
+  }
+  .study-guide-content h3 {
+    font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+    color: var(--accent2); margin: 20px 0 8px;
+  }
+  .study-guide-content h3:first-child { margin-top: 0; }
+  .study-guide-content p { font-size: 14px; line-height: 1.7; color: #ccc8ee; margin-bottom: 10px; }
+  .study-guide-content ul { padding-left: 20px; margin-bottom: 10px; }
+  .study-guide-content li { font-size: 14px; line-height: 1.7; color: #ccc8ee; margin-bottom: 4px; }
+  .study-guide-content strong { color: var(--text); }
+  .study-guide-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+  /* ── Flashcard ── */
+  .fc-progress-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .fc-counter { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--muted); }
+
+  .flashcard-scene {
+    perspective: 1200px;
+    width: 100%; height: 300px;
+    margin-bottom: 24px;
+    cursor: pointer;
+  }
+  @media (max-width: 560px) { .flashcard-scene { height: 240px; } }
+
+  .flashcard {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .flashcard.flipped { transform: rotateY(180deg); }
+
+  .fc-face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px; text-align: center;
+  }
+  .fc-front {
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .fc-back {
+    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(255,106,155,0.1));
+    border: 1px solid rgba(124,106,255,0.35);
+    transform: rotateY(180deg);
+  }
+  .fc-label {
+    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 16px;
+  }
+  .fc-back .fc-label { color: var(--accent); }
+  .fc-text {
+    font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
+    line-height: 1.5; color: var(--text);
+  }
+  .fc-back .fc-text { font-size: 22px; color: var(--accent); }
+  .fc-hint { font-size: 12px; color: var(--muted); margin-top: 20px; }
+
+  .fc-nav {
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; margin-bottom: 24px;
+  }
+  .fc-nav-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .fc-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .fc-nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .fc-flip-hint {
+    text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 28px;
   }
 
-  .review-correct-ans {
-    color: #6effc0;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
+  .fc-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; padding-bottom: 20px; }
 
-  .review-wrong-ans {
-    color: #ff8fa8;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  /* Results actions */
-  .results-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 12px;
-    padding-bottom: 40px;
-  }
-
-  /* Error */
+  /* ── Error ── */
   .error-box {
-    background: rgba(255,79,110,0.1);
-    border: 1px solid rgba(255,79,110,0.35);
-    border-radius: 10px;
-    padding: 14px 18px;
-    font-size: 14px;
-    color: #ff8fa8;
-    margin-top: 12px;
-    display: none;
+    background: rgba(255,79,110,0.1); border: 1px solid rgba(255,79,110,0.35);
+    border-radius: 10px; padding: 14px 18px;
+    font-size: 14px; color: #ff8fa8; margin-top: 12px; display: none;
   }
-
   .error-box.show { display: block; }
 
-  /* Animations */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  /* Screens */
+  /* ── Screens ── */
   .screen { display: none; }
   .screen.active { display: block; }
 
-  /* Divider */
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 24px 0;
-  }
+  /* ── Animations ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Mobile */
+  .anim-1 { animation: fadeUp 0.5s ease 0.05s both; }
+  .anim-2 { animation: fadeUp 0.5s ease 0.1s both; }
+  .anim-3 { animation: fadeUp 0.5s ease 0.15s both; }
+  .anim-4 { animation: fadeUp 0.5s ease 0.2s both; }
+
   @media (max-width: 560px) {
     .question-text { font-size: 17px; }
     .choice { font-size: 14px; padding: 14px 16px; }
     .results-title { font-size: 22px; }
     .setup-row { flex-direction: column; align-items: flex-start; }
     input[type="number"] { width: 100%; }
+    .fc-text { font-size: 16px; }
+    .fc-back .fc-text { font-size: 19px; }
   }
-
-  /* Tooltip for key toggle */
-  .key-toggle {
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 18px;
-    padding: 4px;
-    flex-shrink: 0;
-  }
-  .key-toggle:hover { color: var(--text); }
-
-  .section-anim { animation: fadeUp 0.5s ease 0.1s both; }
-  .section-anim-2 { animation: fadeUp 0.5s ease 0.2s both; }
 </style>
 </head>
 <body>
@@ -601,28 +436,47 @@
     <div class="logo-text"><span>Study</span>Pulse</div>
   </div>
 
-  <!-- SETUP SCREEN -->
+  <!-- ══════════════════════════════════════════════════════
+       SETUP SCREEN
+  ══════════════════════════════════════════════════════ -->
   <div id="screen-setup" class="screen active">
 
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-quiz-btn" onclick="setMode('quiz')">⚡ Quiz Mode</button>
+      <button class="mode-btn" id="mode-fc-btn" onclick="setMode('flashcard')">🃏 Flashcard Mode</button>
+    </div>
+
     <!-- API Key -->
-    <div class="card api-section">
+    <div class="card anim-1">
       <div class="card-label">API Key</div>
       <div class="api-row">
         <div class="api-status" id="api-status"></div>
-        <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="flex:1" />
-        <button class="key-toggle" id="key-toggle" title="Show/hide key">👁</button>
+        <input type="password" id="api-key-input" placeholder="sk-ant-api03-…" style="flex:1" />
+        <button class="key-toggle" id="key-toggle" title="Show/hide">👁</button>
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Your key is only kept in memory and never stored.</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Key is held in memory only and not persisted in the browser.</div>
     </div>
+
+    <!-- Load Session -->
+    <label class="load-strip" id="load-strip">
+      <input type="file" id="load-file-input" accept=".json" onchange="loadSession(event)" />
+      <div class="load-strip-icon">📂</div>
+      <div class="load-strip-text">
+        <div class="load-strip-title">Load Saved Session</div>
+        <div class="load-strip-sub">Upload a previously saved quiz or flashcard session file to skip generation</div>
+      </div>
+      <div style="color:var(--muted);font-size:20px;">›</div>
+    </label>
 
     <!-- Content -->
-    <div class="card section-anim">
+    <div class="card anim-2">
       <div class="card-label">Study Content</div>
-      <textarea id="content-input" placeholder="Paste your notes, slide content, article, or any text here. Claude will read it and generate quiz questions based on the material…"></textarea>
+      <textarea id="content-input" placeholder="Paste your notes, slide content, article, or any text here. Claude will read it and generate your session…"></textarea>
     </div>
 
-    <!-- Settings -->
-    <div class="card section-anim-2">
+    <!-- Settings — Quiz -->
+    <div class="card anim-3" id="quiz-settings">
       <div class="card-label">Quiz Settings</div>
       <div class="setup-row">
         <div class="field-group" style="flex:1">
@@ -638,26 +492,44 @@
           </select>
         </div>
         <div class="field-group">
-          <button class="btn btn-primary" id="generate-btn" onclick="generateQuiz()">Generate Quiz ⚡</button>
+          <button class="btn btn-primary" onclick="generateQuiz()">Generate Quiz ⚡</button>
         </div>
       </div>
       <div class="error-box" id="setup-error"></div>
     </div>
 
+    <!-- Settings — Flashcard -->
+    <div class="card anim-3" id="fc-settings" style="display:none">
+      <div class="card-label">Flashcard Settings</div>
+      <div class="setup-row">
+        <div class="field-group" style="flex:1">
+          <div class="field-label">Number of cards</div>
+          <input type="number" id="num-cards" value="15" min="5" max="40" />
+        </div>
+        <div class="field-group">
+          <button class="btn btn-primary" onclick="generateFlashcards()">Generate Flashcards 🃏</button>
+        </div>
+      </div>
+      <div class="error-box" id="fc-setup-error"></div>
+    </div>
+
   </div>
 
-  <!-- LOADING SCREEN -->
+  <!-- ══════════════════════════════════════════════════════
+       LOADING SCREEN
+  ══════════════════════════════════════════════════════ -->
   <div id="screen-loading" class="screen">
     <div class="loading-screen">
       <div class="spinner"></div>
-      <div class="loading-title">Generating your quiz…</div>
-      <div class="loading-sub">Claude is reading your content and crafting questions.</div>
+      <div class="loading-title" id="loading-title">Generating your quiz…</div>
+      <div class="loading-sub" id="loading-sub">Claude is reading your content and crafting questions.</div>
     </div>
   </div>
 
-  <!-- QUIZ SCREEN -->
+  <!-- ══════════════════════════════════════════════════════
+       QUIZ SCREEN
+  ══════════════════════════════════════════════════════ -->
   <div id="screen-quiz" class="screen">
-
     <div class="progress-label">
       <span class="progress-text" id="progress-text">Question 1 of 10</span>
       <button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button>
@@ -665,12 +537,12 @@
     <div class="progress-wrap">
       <div class="progress-fill" id="progress-fill" style="width:0%"></div>
     </div>
-
     <div id="question-area"></div>
-
   </div>
 
-  <!-- RESULTS SCREEN -->
+  <!-- ══════════════════════════════════════════════════════
+       RESULTS SCREEN
+  ══════════════════════════════════════════════════════ -->
   <div id="screen-results" class="screen">
 
     <div class="results-header">
@@ -683,19 +555,80 @@
       </div>
     </div>
 
+    <!-- Study guide trigger -->
+    <div id="study-guide-section" class="study-guide-section" style="display:none">
+      <div style="text-align:center">
+        <button class="btn btn-teal" id="study-guide-btn" onclick="generateStudyGuide()">
+          📖 Generate Study Guide for Missed Topics
+        </button>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">Claude will explain the concepts you missed in student-friendly terms</div>
+      </div>
+      <div id="study-guide-output"></div>
+    </div>
+
     <div class="review-list" id="review-list"></div>
 
     <div class="results-actions">
       <button class="btn btn-primary" onclick="tryAgain()">🔄 New Questions, Same Topic</button>
+      <button class="btn btn-secondary" onclick="saveQuizSession()">💾 Save Session</button>
       <button class="btn btn-secondary" onclick="resetToSetup()">📝 New Content</button>
     </div>
 
   </div>
 
-</div>
+  <!-- ══════════════════════════════════════════════════════
+       FLASHCARD SCREEN
+  ══════════════════════════════════════════════════════ -->
+  <div id="screen-flashcard" class="screen">
+
+    <div class="fc-progress-label">
+      <span class="fc-counter" id="fc-counter">Card 1 of 15</span>
+      <button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="fc-progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- The card -->
+    <div class="flashcard-scene" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="fc-face fc-front">
+          <div class="fc-label">Definition</div>
+          <div class="fc-text" id="fc-front-text">Loading…</div>
+          <div class="fc-hint">Tap to reveal the term</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">Term</div>
+          <div class="fc-text" id="fc-back-text">…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fc-flip-hint" id="fc-flip-hint">Tap the card to flip it</div>
+
+    <div class="fc-nav">
+      <button class="fc-nav-btn" id="fc-prev" onclick="fcNav(-1)" disabled>‹</button>
+      <span style="font-family:'Syne',sans-serif;font-size:13px;color:var(--muted)" id="fc-nav-label">1 / 15</span>
+      <button class="fc-nav-btn" id="fc-next" onclick="fcNav(1)">›</button>
+    </div>
+
+    <div class="fc-actions">
+      <button class="btn btn-primary" onclick="shuffleAndRestart()">🔀 Shuffle & Restart</button>
+      <button class="btn btn-secondary" onclick="saveFcSession()">💾 Save Session</button>
+      <button class="btn btn-secondary" onclick="resetToSetup()">📝 New Content</button>
+    </div>
+
+  </div>
+
+</div><!-- /container -->
 
 <script>
-// ─── State ───────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let appMode = 'quiz'; // 'quiz' | 'flashcard'
+
+// Quiz state
 let questions = [];
 let currentQ = 0;
 let answered = false;
@@ -704,73 +637,149 @@ let savedContent = '';
 let savedNumQ = 10;
 let savedDifficulty = 'standard';
 
-// ─── API Key UX ──────────────────────────────────────────────────────────────
+// Flashcard state
+let flashcards = [];
+let fcIndex = 0;
+let fcFlipped = false;
+let savedNumCards = 15;
+
+// ═══════════════════════════════════════════════════════════════════
+// MODE TOGGLE
+// ═══════════════════════════════════════════════════════════════════
+function setMode(mode) {
+  appMode = mode;
+  document.getElementById('mode-quiz-btn').classList.toggle('active', mode === 'quiz');
+  document.getElementById('mode-fc-btn').classList.toggle('active', mode === 'flashcard');
+  document.getElementById('quiz-settings').style.display = mode === 'quiz' ? 'block' : 'none';
+  document.getElementById('fc-settings').style.display = mode === 'flashcard' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// API KEY UX
+// ═══════════════════════════════════════════════════════════════════
 const keyInput = document.getElementById('api-key-input');
 const keyStatus = document.getElementById('api-status');
 const keyToggle = document.getElementById('key-toggle');
 let keyVisible = false;
 
 keyInput.addEventListener('input', () => {
-  const val = keyInput.value.trim();
-  keyStatus.className = 'api-status' + (val.startsWith('sk-ant') ? ' active' : '');
+  keyStatus.className = 'api-status' + (keyInput.value.trim().startsWith('sk-ant') ? ' active' : '');
 });
-
 keyToggle.addEventListener('click', () => {
   keyVisible = !keyVisible;
   keyInput.type = keyVisible ? 'text' : 'password';
   keyToggle.textContent = keyVisible ? '🙈' : '👁';
 });
 
-// ─── Screen switcher ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// SCREEN SWITCHER
+// ═══════════════════════════════════════════════════════════════════
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
 }
 
-// ─── Generate Quiz ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// SHARED API CALL
+// ═══════════════════════════════════════════════════════════════════
+async function callClaude(apiKey, prompt, maxTokens = 4000) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || '';
+}
+
+function parseJSON(raw) {
+  raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try { return JSON.parse(raw); } catch(e) {
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Could not parse response data.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// QUIZ GENERATION
+// ═══════════════════════════════════════════════════════════════════
 async function generateQuiz() {
   const apiKey = keyInput.value.trim();
   const content = document.getElementById('content-input').value.trim();
   const numQ = parseInt(document.getElementById('num-questions').value) || 10;
   const difficulty = document.getElementById('difficulty').value;
   const errBox = document.getElementById('setup-error');
-
   errBox.classList.remove('show');
 
   if (!apiKey) return showError(errBox, 'Please enter your Anthropic API key.');
-  if (!apiKey.startsWith('sk-ant')) return showError(errBox, 'That doesn\'t look like a valid Anthropic key (should start with sk-ant…).');
+  if (!apiKey.startsWith('sk-ant')) return showError(errBox, "That doesn't look like a valid Anthropic key (should start with sk-ant…).");
   if (!content || content.length < 50) return showError(errBox, 'Please paste some study content — at least a few sentences.');
 
   savedContent = content;
   savedNumQ = numQ;
   savedDifficulty = difficulty;
 
-  await runGeneration(apiKey, content, numQ, difficulty);
-}
-
-async function runGeneration(apiKey, content, numQ, difficulty) {
+  document.getElementById('loading-title').textContent = 'Generating your quiz…';
+  document.getElementById('loading-sub').textContent = 'Claude is reading your content and crafting questions.';
   showScreen('screen-loading');
 
-  const difficultyNote = {
+  try {
+    const raw = await callClaude(apiKey, buildQuizPrompt(content, numQ, difficulty));
+    const parsed = parseJSON(raw);
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('Received empty or invalid quiz data.');
+
+    questions = parsed.map(q => {
+      const choices = [q.correct, ...q.distractors].sort(() => Math.random() - 0.5);
+      return { question: q.question, correct: q.correct, choices };
+    });
+
+    userAnswers = new Array(questions.length).fill(null);
+    currentQ = 0;
+    answered = false;
+    showScreen('screen-quiz');
+    renderQuestion();
+  } catch(err) {
+    showScreen('screen-setup');
+    showError(document.getElementById('setup-error'), '⚠️ ' + err.message);
+  }
+}
+
+function buildQuizPrompt(content, numQ, difficulty) {
+  const diffNote = {
     easy: 'Make the questions straightforward with clearly distinct answer choices. Target students encountering the material for the first time.',
     standard: 'Mix of recall and comprehension questions. Distractors should be plausible but clearly wrong to someone who studied.',
     challenging: 'Focus on deeper comprehension and application. Distractors should be very plausible — a student must truly understand the material to distinguish them.'
   }[difficulty];
 
-  const prompt = `You are an expert quiz writer. Given the study content below, generate exactly ${numQ} multiple-choice questions.
+  return `You are an expert quiz writer. Given the study content below, generate exactly ${numQ} multiple-choice questions.
 
 DIFFICULTY: ${difficulty.toUpperCase()}
-${difficultyNote}
+${diffNote}
 
 CRITICAL RULES FOR DISTRACTORS (wrong answers):
-1. Each distractor must be the SAME TYPE as the correct answer (e.g., if the answer is a process name, all distractors are process names from the same domain).
-2. Distractors must be plausible — a student who hasn't studied might pick them, but someone who studied carefully would know they're wrong.
-3. Distractors must NOT be obviously silly, unrelated, or from a completely different topic.
+1. Each distractor must be the SAME TYPE as the correct answer.
+2. Distractors must be plausible — a student who hasn't studied might pick them, but someone who studied would know they're wrong.
+3. Distractors must NOT be obviously silly or from a completely different topic.
 4. Distractors should be roughly the same length and grammatical structure as the correct answer.
 5. Never use "All of the above" or "None of the above".
 6. Do NOT repeat the same distractor across questions.
 
-OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no code fences, no explanation. Just the raw JSON array.
+OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no code fences, no explanation.
 
 [
   {
@@ -782,80 +791,43 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no code fences
 
 STUDY CONTENT:
 ${content.slice(0, 12000)}`;
+}
 
+async function tryAgain() {
+  const apiKey = keyInput.value.trim();
+  if (!apiKey) { alert('Please re-enter your API key.'); resetToSetup(); return; }
+  document.getElementById('loading-title').textContent = 'Generating new questions…';
+  document.getElementById('loading-sub').textContent = 'Same topic, fresh set of questions and distractors.';
+  showScreen('screen-loading');
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error ${res.status}`);
-    }
-
-    const data = await res.json();
-    let raw = data.content?.[0]?.text || '';
-
-    // Strip any accidental markdown fences
-    raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch(e) {
-      // Try to extract JSON array from the response
-      const match = raw.match(/\[[\s\S]*\]/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Could not parse quiz data from response.');
-    }
-
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error('Received empty or invalid quiz data.');
-    }
-
-    // Build shuffled questions
+    const raw = await callClaude(apiKey, buildQuizPrompt(savedContent, savedNumQ, savedDifficulty));
+    const parsed = parseJSON(raw);
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('Received empty or invalid quiz data.');
     questions = parsed.map(q => {
       const choices = [q.correct, ...q.distractors].sort(() => Math.random() - 0.5);
       return { question: q.question, correct: q.correct, choices };
     });
-
     userAnswers = new Array(questions.length).fill(null);
-    currentQ = 0;
-    answered = false;
-
+    currentQ = 0; answered = false;
     showScreen('screen-quiz');
     renderQuestion();
-
   } catch(err) {
-    showScreen('screen-setup');
-    const errBox = document.getElementById('setup-error');
-    showError(errBox, '⚠️ ' + err.message);
+    showScreen('screen-results');
+    alert('Error generating new questions: ' + err.message);
   }
 }
 
-// ─── Quiz Rendering ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// QUIZ RENDERING
+// ═══════════════════════════════════════════════════════════════════
 function renderQuestion() {
   const q = questions[currentQ];
   const total = questions.length;
-
   document.getElementById('progress-text').textContent = `Question ${currentQ + 1} of ${total}`;
   document.getElementById('progress-fill').style.width = `${(currentQ / total) * 100}%`;
 
-  const letters = ['A', 'B', 'C', 'D', 'E'];
-  const area = document.getElementById('question-area');
-
-  area.innerHTML = `
+  const letters = ['A','B','C','D','E'];
+  document.getElementById('question-area').innerHTML = `
     <div class="card question-card">
       <div class="question-number">Question ${currentQ + 1} / ${total}</div>
       <div class="question-text">${escapeHtml(q.question)}</div>
@@ -875,76 +847,58 @@ function renderQuestion() {
       </button>
     </div>
   `;
-
   answered = false;
 }
 
 function selectAnswer(idx) {
   if (answered) return;
   answered = true;
-
   const q = questions[currentQ];
   const chosen = q.choices[idx];
   const isCorrect = chosen === q.correct;
   const correctIdx = q.choices.indexOf(q.correct);
-
   userAnswers[currentQ] = { chosen, isCorrect };
 
-  // Disable all buttons
-  q.choices.forEach((_, i) => {
-    document.getElementById(`choice-${i}`).disabled = true;
-  });
+  q.choices.forEach((_, i) => document.getElementById(`choice-${i}`).disabled = true);
 
-  // Mark chosen
   const chosenBtn = document.getElementById(`choice-${idx}`);
   chosenBtn.classList.add(isCorrect ? 'correct' : 'wrong');
-  chosenBtn.querySelector('.choice-icon')?.remove();
   const icon = document.createElement('span');
   icon.className = 'choice-icon';
   icon.textContent = isCorrect ? '✓' : '✗';
   chosenBtn.appendChild(icon);
 
-  // If wrong, reveal correct
   if (!isCorrect) {
     const correctBtn = document.getElementById(`choice-${correctIdx}`);
     correctBtn.classList.add('reveal-correct');
     const cIcon = document.createElement('span');
-    cIcon.className = 'choice-icon';
-    cIcon.textContent = '✓';
+    cIcon.className = 'choice-icon'; cIcon.textContent = '✓';
     correctBtn.appendChild(cIcon);
   }
 
-  // Feedback
-  const fb = document.getElementById('feedback-area');
-  fb.innerHTML = `
+  document.getElementById('feedback-area').innerHTML = `
     <div class="feedback ${isCorrect ? 'correct-fb' : 'wrong-fb'}">
       <span>${isCorrect ? '✅' : '❌'}</span>
-      <span>${isCorrect
-        ? 'Correct! Great job.'
-        : `Not quite. The correct answer is: <strong>${escapeHtml(q.correct)}</strong>`
-      }</span>
+      <span>${isCorrect ? 'Correct! Great job.' : `Not quite. The correct answer is: <strong>${escapeHtml(q.correct)}</strong>`}</span>
     </div>
   `;
-
   document.getElementById('next-row').style.display = 'flex';
 }
 
 function nextQuestion() {
   currentQ++;
-  if (currentQ >= questions.length) {
-    showResults();
-  } else {
-    renderQuestion();
-  }
+  if (currentQ >= questions.length) showResults();
+  else renderQuestion();
 }
 
-// ─── Results ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// RESULTS
+// ═══════════════════════════════════════════════════════════════════
 function showResults() {
   const total = questions.length;
   const correct = userAnswers.filter(a => a?.isCorrect).length;
   const pct = Math.round((correct / total) * 100);
 
-  // Emoji + title
   let emoji = '😓', title = 'Keep Studying!';
   if (pct >= 90) { emoji = '🏆'; title = 'Outstanding!'; }
   else if (pct >= 75) { emoji = '🎉'; title = 'Great Work!'; }
@@ -955,21 +909,22 @@ function showResults() {
   document.getElementById('results-title').textContent = title;
   document.getElementById('results-sub').textContent = `You answered ${correct} out of ${total} correctly.`;
   document.getElementById('score-text').textContent = `${correct} / ${total} — ${pct}%`;
+  document.getElementById('score-dot').style.background = pct >= 75 ? 'var(--correct)' : pct >= 50 ? '#ffb347' : 'var(--wrong)';
 
-  const dot = document.getElementById('score-dot');
-  dot.style.background = pct >= 75 ? 'var(--correct)' : pct >= 50 ? '#ffb347' : 'var(--wrong)';
+  // Show study guide button only if there are missed questions
+  const missedCount = userAnswers.filter(a => a && !a.isCorrect).length;
+  const sgSection = document.getElementById('study-guide-section');
+  sgSection.style.display = missedCount > 0 ? 'block' : 'none';
+  document.getElementById('study-guide-output').innerHTML = '';
+  document.getElementById('study-guide-btn').disabled = false;
+  document.getElementById('study-guide-btn').textContent = '📖 Generate Study Guide for Missed Topics';
 
-  // Review list
-  const list = document.getElementById('review-list');
-  list.innerHTML = questions.map((q, i) => {
+  document.getElementById('review-list').innerHTML = questions.map((q, i) => {
     const ans = userAnswers[i];
     const ok = ans?.isCorrect;
     return `
       <div class="review-item ${ok ? 'r-correct' : 'r-wrong'}" style="animation-delay:${i * 0.04}s">
-        <div class="review-q">
-          <span class="review-icon">${ok ? '✅' : '❌'}</span>
-          <span>${escapeHtml(q.question)}</span>
-        </div>
+        <div class="review-q"><span class="review-icon">${ok ? '✅' : '❌'}</span><span>${escapeHtml(q.question)}</span></div>
         <div class="review-answers">
           <div class="review-correct-ans">✓ ${escapeHtml(q.correct)}</div>
           ${!ok && ans ? `<div class="review-wrong-ans">✗ You answered: ${escapeHtml(ans.chosen)}</div>` : ''}
@@ -978,44 +933,322 @@ function showResults() {
     `;
   }).join('');
 
-  // Update progress to full
   document.getElementById('progress-fill').style.width = '100%';
-
   showScreen('screen-results');
 }
 
-// ─── Try Again (same content, new questions) ─────────────────────────────────
-async function tryAgain() {
+// ═══════════════════════════════════════════════════════════════════
+// STUDY GUIDE
+// ═══════════════════════════════════════════════════════════════════
+async function generateStudyGuide() {
   const apiKey = keyInput.value.trim();
-  if (!apiKey) {
-    alert('Please re-enter your API key on the setup screen.');
-    resetToSetup();
-    return;
+  if (!apiKey) { alert('API key not found. Please return to setup.'); return; }
+
+  const missed = questions
+    .map((q, i) => ({ q, ans: userAnswers[i] }))
+    .filter(({ ans }) => ans && !ans.isCorrect);
+
+  if (!missed.length) return;
+
+  const btn = document.getElementById('study-guide-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating study guide…';
+
+  const missedSummary = missed.map(({ q, ans }) =>
+    `Question: ${q.question}\nCorrect answer: ${q.correct}\nStudent answered: ${ans.chosen}`
+  ).join('\n\n');
+
+  const prompt = `You are a patient, encouraging tutor. A student just took a quiz and got the following questions wrong. 
+
+For each missed question, write a focused study guide section that:
+1. Explains the concept clearly in plain, student-friendly language
+2. Clarifies WHY the correct answer is right
+3. Explains why the student's wrong answer was a common misconception
+4. Gives a memory tip, analogy, or real-world example to help it stick
+
+Format your response using this structure for each topic:
+### [Topic/Concept Name]
+Then write 2-3 paragraphs of explanation. Keep it encouraging and clear. Do not use JSON — write in plain readable text with markdown headings.
+
+MISSED QUESTIONS:
+${missedSummary}`;
+
+  try {
+    const raw = await callClaude(apiKey, prompt, 2000);
+    const output = document.getElementById('study-guide-output');
+
+    // Simple markdown renderer for headings, bold, paragraphs
+    const html = raw
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+      .split('\n\n')
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => p.startsWith('<h3>') || p.startsWith('<ul>') ? p : `<p>${p}</p>`)
+      .join('\n');
+
+    output.innerHTML = `
+      <div class="study-guide-content">${html}</div>
+      <div class="study-guide-actions">
+        <button class="btn btn-secondary btn-sm" onclick="downloadStudyGuide()">💾 Save Study Guide</button>
+      </div>
+    `;
+
+    btn.textContent = '✅ Study Guide Generated';
+  } catch(err) {
+    btn.disabled = false;
+    btn.textContent = '📖 Generate Study Guide for Missed Topics';
+    alert('Error generating study guide: ' + err.message);
   }
-  await runGeneration(apiKey, savedContent, savedNumQ, savedDifficulty);
 }
 
-// ─── Reset ───────────────────────────────────────────────────────────────────
+function downloadStudyGuide() {
+  const content = document.querySelector('.study-guide-content');
+  if (!content) return;
+  // Convert back to plain text
+  const text = content.innerText;
+  downloadText('studypulse-study-guide.txt', text);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FLASHCARD GENERATION
+// ═══════════════════════════════════════════════════════════════════
+async function generateFlashcards() {
+  const apiKey = keyInput.value.trim();
+  const content = document.getElementById('content-input').value.trim();
+  const numCards = parseInt(document.getElementById('num-cards').value) || 15;
+  const errBox = document.getElementById('fc-setup-error');
+  errBox.classList.remove('show');
+
+  if (!apiKey) return showError(errBox, 'Please enter your Anthropic API key.');
+  if (!apiKey.startsWith('sk-ant')) return showError(errBox, "That doesn't look like a valid Anthropic key.");
+  if (!content || content.length < 50) return showError(errBox, 'Please paste some study content.');
+
+  savedContent = content;
+  savedNumCards = numCards;
+
+  document.getElementById('loading-title').textContent = 'Generating your flashcards…';
+  document.getElementById('loading-sub').textContent = 'Claude is extracting key terms and definitions.';
+  showScreen('screen-loading');
+
+  const prompt = `You are an expert study tool creator. From the study content below, extract exactly ${numCards} key term-definition pairs suitable for flashcards.
+
+Rules:
+1. The "term" should be a concise word or short phrase (1-5 words max).
+2. The "definition" should be a clear, complete explanation in 1-3 sentences — written in plain student-friendly language.
+3. Pick the most important, testable concepts from the content.
+4. Do not repeat similar terms.
+5. Definitions should stand alone — a student reading just the definition should be able to guess the term.
+
+OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no code fences, no explanation.
+
+[
+  {
+    "term": "Photosynthesis",
+    "definition": "The process by which plants use sunlight, water, and carbon dioxide to produce glucose and oxygen."
+  }
+]
+
+STUDY CONTENT:
+${content.slice(0, 12000)}`;
+
+  try {
+    const raw = await callClaude(apiKey, prompt, 3000);
+    const parsed = parseJSON(raw);
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('Received empty or invalid flashcard data.');
+
+    flashcards = parsed.map(c => ({ term: c.term, definition: c.definition }));
+    fcIndex = 0;
+    fcFlipped = false;
+    showScreen('screen-flashcard');
+    renderFlashcard();
+  } catch(err) {
+    showScreen('screen-setup');
+    showError(document.getElementById('fc-setup-error'), '⚠️ ' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FLASHCARD RENDERING
+// ═══════════════════════════════════════════════════════════════════
+function renderFlashcard() {
+  const card = flashcards[fcIndex];
+  const total = flashcards.length;
+
+  document.getElementById('fc-counter').textContent = `Card ${fcIndex + 1} of ${total}`;
+  document.getElementById('fc-nav-label').textContent = `${fcIndex + 1} / ${total}`;
+  document.getElementById('fc-progress-fill').style.width = `${((fcIndex + 1) / total) * 100}%`;
+
+  document.getElementById('fc-front-text').textContent = card.definition;
+  document.getElementById('fc-back-text').textContent = card.term;
+
+  // Reset flip
+  fcFlipped = false;
+  document.getElementById('flashcard').classList.remove('flipped');
+
+  // Nav buttons
+  document.getElementById('fc-prev').disabled = fcIndex === 0;
+  document.getElementById('fc-next').disabled = fcIndex === total - 1;
+}
+
+function flipCard() {
+  fcFlipped = !fcFlipped;
+  document.getElementById('flashcard').classList.toggle('flipped', fcFlipped);
+  document.getElementById('fc-flip-hint').textContent = fcFlipped ? 'Tap again to flip back' : 'Tap the card to flip it';
+}
+
+function fcNav(dir) {
+  const newIdx = fcIndex + dir;
+  if (newIdx < 0 || newIdx >= flashcards.length) return;
+  fcIndex = newIdx;
+  renderFlashcard();
+}
+
+function shuffleAndRestart() {
+  flashcards = flashcards.sort(() => Math.random() - 0.5);
+  fcIndex = 0;
+  renderFlashcard();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SAVE & LOAD SESSIONS
+// ═══════════════════════════════════════════════════════════════════
+function saveQuizSession() {
+  const apiKey = keyInput.value.trim();
+  const session = {
+    type: 'quiz',
+    version: 1,
+    savedAt: new Date().toISOString(),
+    apiKey,
+    content: savedContent,
+    numQuestions: savedNumQ,
+    difficulty: savedDifficulty,
+    questions: questions.map(q => ({
+      question: q.question,
+      correct: q.correct,
+      distractors: q.choices.filter(c => c !== q.correct)
+    }))
+  };
+  const name = `studypulse-quiz-${datestamp()}.json`;
+  downloadJSON(name, session);
+}
+
+function saveFcSession() {
+  const apiKey = keyInput.value.trim();
+  const session = {
+    type: 'flashcard',
+    version: 1,
+    savedAt: new Date().toISOString(),
+    apiKey,
+    content: savedContent,
+    numCards: savedNumCards,
+    cards: flashcards
+  };
+  const name = `studypulse-flashcards-${datestamp()}.json`;
+  downloadJSON(name, session);
+}
+
+function loadSession(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const session = JSON.parse(e.target.result);
+      if (!session.type || !session.version) throw new Error('Invalid session file.');
+
+      // Restore API key
+      if (session.apiKey) {
+        keyInput.value = session.apiKey;
+        keyStatus.className = 'api-status' + (session.apiKey.startsWith('sk-ant') ? ' active' : '');
+      }
+
+      // Restore content
+      if (session.content) {
+        document.getElementById('content-input').value = session.content;
+        savedContent = session.content;
+      }
+
+      if (session.type === 'quiz') {
+        savedNumQ = session.numQuestions || 10;
+        savedDifficulty = session.difficulty || 'standard';
+        document.getElementById('num-questions').value = savedNumQ;
+        document.getElementById('difficulty').value = savedDifficulty;
+
+        questions = session.questions.map(q => {
+          const choices = [q.correct, ...q.distractors].sort(() => Math.random() - 0.5);
+          return { question: q.question, correct: q.correct, choices };
+        });
+        userAnswers = new Array(questions.length).fill(null);
+        currentQ = 0; answered = false;
+        setMode('quiz');
+        showScreen('screen-quiz');
+        renderQuestion();
+
+      } else if (session.type === 'flashcard') {
+        savedNumCards = session.numCards || 15;
+        document.getElementById('num-cards').value = savedNumCards;
+        flashcards = session.cards || [];
+        fcIndex = 0; fcFlipped = false;
+        setMode('flashcard');
+        showScreen('screen-flashcard');
+        renderFlashcard();
+      } else {
+        throw new Error('Unknown session type.');
+      }
+    } catch(err) {
+      alert('Could not load session: ' + err.message);
+    }
+    // Reset file input so same file can be loaded again
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════════════════
 function resetToSetup() {
+  questions = []; userAnswers = []; currentQ = 0; answered = false;
+  flashcards = []; fcIndex = 0; fcFlipped = false;
   showScreen('screen-setup');
-  questions = [];
-  userAnswers = [];
-  currentQ = 0;
-  answered = false;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function showError(el, msg) {
-  el.textContent = msg;
-  el.classList.add('show');
-}
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
 
 function escapeHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function downloadJSON(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function downloadText(filename, text) {
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function datestamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
 }
 </script>
 </body>
