@@ -308,22 +308,96 @@
   .results-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
 
   /* ── Study Guide ── */
-  .study-guide-section { margin-top: 28px; animation: fadeUp 0.4s ease both; }
-  .study-guide-content {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 28px;
-    margin-top: 16px;
+  .study-guide-section { margin: 28px 0; animation: fadeUp 0.4s ease both; }
+
+  /* Collapsible panel */
+  .sg-panel {
+    background: var(--surface);
+    border: 1px solid rgba(34,201,122,0.3);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
-  .study-guide-content h3 {
-    font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
-    color: var(--accent2); margin: 20px 0 8px;
+  .sg-panel-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, rgba(34,201,122,0.1), rgba(106,255,202,0.05));
+    border-bottom: 1px solid rgba(34,201,122,0.2);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
   }
-  .study-guide-content h3:first-child { margin-top: 0; }
-  .study-guide-content p { font-size: 14px; line-height: 1.7; color: #ccc8ee; margin-bottom: 10px; }
-  .study-guide-content ul { padding-left: 20px; margin-bottom: 10px; }
-  .study-guide-content li { font-size: 14px; line-height: 1.7; color: #ccc8ee; margin-bottom: 4px; }
-  .study-guide-content strong { color: var(--text); }
-  .study-guide-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .sg-panel-header:hover { background: linear-gradient(135deg, rgba(34,201,122,0.15), rgba(106,255,202,0.08)); }
+  .sg-panel-icon { font-size: 20px; flex-shrink: 0; }
+  .sg-panel-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+    color: #6effc0; flex: 1;
+  }
+  .sg-panel-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .sg-chevron {
+    font-size: 18px; color: var(--muted);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    flex-shrink: 0;
+  }
+  .sg-panel.open .sg-chevron { transform: rotate(180deg); }
+
+  .sg-panel-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .sg-panel.open .sg-panel-body { max-height: 2000px; }
+
+  .sg-panel-inner { padding: 24px 22px; }
+
+  /* Loading skeleton */
+  .sg-skeleton { display: flex; flex-direction: column; gap: 12px; }
+  .sg-skel-bar {
+    height: 14px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+  .sg-skel-bar.title { height: 18px; width: 55%; margin-bottom: 4px; }
+  .sg-skel-bar.short { width: 40%; }
+  .sg-skel-bar.med { width: 75%; }
+  .sg-skel-bar.full { width: 100%; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* Spinner inside button */
+  .btn-spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  /* Pulsing glow on loading button */
+  .btn-teal.loading {
+    animation: tealPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes tealPulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(34,201,122,0.25); }
+    50% { box-shadow: 0 4px 32px rgba(34,201,122,0.55), 0 0 0 4px rgba(34,201,122,0.12); }
+  }
+
+  /* Study guide content typography */
+  .sg-content h3 {
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+    color: #6effc0; margin: 22px 0 8px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(34,201,122,0.15);
+  }
+  .sg-content h3:first-child { margin-top: 0; }
+  .sg-content p { font-size: 14px; line-height: 1.75; color: #ccc8ee; margin-bottom: 10px; }
+  .sg-content ul { padding-left: 20px; margin-bottom: 10px; }
+  .sg-content li { font-size: 14px; line-height: 1.75; color: #ccc8ee; margin-bottom: 5px; }
+  .sg-content strong { color: var(--text); }
+  .sg-content em { color: #b8b0f0; font-style: italic; }
+
+  .sg-divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .sg-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
 
   /* ── Flashcard ── */
   .fc-progress-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -557,13 +631,28 @@
 
     <!-- Study guide trigger -->
     <div id="study-guide-section" class="study-guide-section" style="display:none">
-      <div style="text-align:center">
+      <div style="text-align:center;margin-bottom:16px;">
         <button class="btn btn-teal" id="study-guide-btn" onclick="generateStudyGuide()">
           📖 Generate Study Guide for Missed Topics
         </button>
         <div style="font-size:12px;color:var(--muted);margin-top:8px;">Claude will explain the concepts you missed in student-friendly terms</div>
       </div>
-      <div id="study-guide-output"></div>
+      <!-- Collapsible panel — hidden until guide is ready -->
+      <div class="sg-panel" id="sg-panel" style="display:none">
+        <div class="sg-panel-header" onclick="toggleSgPanel()">
+          <div class="sg-panel-icon">📖</div>
+          <div style="flex:1">
+            <div class="sg-panel-title">Study Guide — Missed Topics</div>
+            <div class="sg-panel-subtitle" id="sg-panel-subtitle">Click to expand</div>
+          </div>
+          <div class="sg-chevron">⌄</div>
+        </div>
+        <div class="sg-panel-body">
+          <div class="sg-panel-inner">
+            <div id="study-guide-output"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="review-list" id="review-list"></div>
@@ -915,9 +1004,15 @@ function showResults() {
   const missedCount = userAnswers.filter(a => a && !a.isCorrect).length;
   const sgSection = document.getElementById('study-guide-section');
   sgSection.style.display = missedCount > 0 ? 'block' : 'none';
+  // Reset panel state
+  const sgPanel = document.getElementById('sg-panel');
+  sgPanel.style.display = 'none';
+  sgPanel.classList.remove('open');
   document.getElementById('study-guide-output').innerHTML = '';
-  document.getElementById('study-guide-btn').disabled = false;
-  document.getElementById('study-guide-btn').textContent = '📖 Generate Study Guide for Missed Topics';
+  const btn = document.getElementById('study-guide-btn');
+  btn.disabled = false;
+  btn.classList.remove('loading');
+  btn.innerHTML = '📖 Generate Study Guide for Missed Topics';
 
   document.getElementById('review-list').innerHTML = questions.map((q, i) => {
     const ans = userAnswers[i];
@@ -952,7 +1047,8 @@ async function generateStudyGuide() {
 
   const btn = document.getElementById('study-guide-btn');
   btn.disabled = true;
-  btn.textContent = '⏳ Generating study guide…';
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="btn-spinner"></span>Generating study guide…';
 
   const missedSummary = missed.map(({ q, ans }) =>
     `Question: ${q.question}\nCorrect answer: ${q.correct}\nStudent answered: ${ans.chosen}`
@@ -973,11 +1069,35 @@ Then write 2-3 paragraphs of explanation. Keep it encouraging and clear. Do not 
 MISSED QUESTIONS:
 ${missedSummary}`;
 
+  // ── Show panel with skeleton immediately ──
+  const panel = document.getElementById('sg-panel');
+  const output = document.getElementById('study-guide-output');
+  panel.style.display = 'block';
+  panel.classList.add('open');
+
+  // Skeleton shimmer placeholder
+  output.innerHTML = `
+    <div class="sg-skeleton">
+      <div class="sg-skel-bar title"></div>
+      <div class="sg-skel-bar full"></div>
+      <div class="sg-skel-bar full"></div>
+      <div class="sg-skel-bar med"></div>
+      <div class="sg-skel-bar short" style="margin-top:8px"></div>
+      <div class="sg-skel-bar title" style="margin-top:16px"></div>
+      <div class="sg-skel-bar full"></div>
+      <div class="sg-skel-bar full"></div>
+      <div class="sg-skel-bar med"></div>
+      <div class="sg-skel-bar short" style="margin-top:8px"></div>
+    </div>
+  `;
+
+  // Scroll panel into view
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   try {
     const raw = await callClaude(apiKey, prompt, 2000);
-    const output = document.getElementById('study-guide-output');
 
-    // Simple markdown renderer for headings, bold, paragraphs
+    // Render markdown → HTML
     const html = raw
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -991,18 +1111,30 @@ ${missedSummary}`;
       .join('\n');
 
     output.innerHTML = `
-      <div class="study-guide-content">${html}</div>
-      <div class="study-guide-actions">
+      <div class="sg-content">${html}</div>
+      <div class="sg-divider"></div>
+      <div class="sg-actions">
         <button class="btn btn-secondary btn-sm" onclick="downloadStudyGuide()">💾 Save Study Guide</button>
       </div>
     `;
 
-    btn.textContent = '✅ Study Guide Generated';
+    // Update panel subtitle with topic count
+    document.getElementById('sg-panel-subtitle').textContent =
+      `${missed.length} topic${missed.length > 1 ? 's' : ''} covered · Click to collapse`;
+
+    btn.textContent = '✅ Study Guide Ready';
+    btn.classList.remove('loading');
+
   } catch(err) {
     btn.disabled = false;
+    btn.classList.remove('loading');
     btn.textContent = '📖 Generate Study Guide for Missed Topics';
-    alert('Error generating study guide: ' + err.message);
+    output.innerHTML = `<div style="color:#ff8fa8;font-size:14px;">⚠️ ${err.message}</div>`;
   }
+}
+
+function toggleSgPanel() {
+  document.getElementById('sg-panel').classList.toggle('open');
 }
 
 function downloadStudyGuide() {
