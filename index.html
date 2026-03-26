@@ -1,2561 +1,763 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>StudyPulse — AI Quiz & Flashcard Generator</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>StudyPulse — AI Quiz Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #13131a;
-    --surface2: #1c1c28;
-    --border: #2a2a3d;
-    --accent: #7c6aff;
-    --accent2: #ff6a9b;
-    --accent3: #6affca;
-    --text: #f0eeff;
-    --muted: #7a7a9a;
-    --correct: #22c97a;
-    --wrong: #ff4f6e;
-    --warn: #ffb347;
-    --radius: 14px;
-    --tab-h: 64px;
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100dvh;
-    overflow-x: hidden;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 60% 50% at 20% 20%, rgba(124,106,255,0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 60% at 80% 80%, rgba(255,106,155,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 40% at 60% 10%, rgba(106,255,202,0.06) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* ── Layout ── */
-  .app-shell {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-  }
-
-  .main-content {
-    flex: 1;
-    overflow-y: auto;
-    padding-bottom: calc(var(--tab-h) + var(--safe-bottom) + 16px);
-  }
-
-  .container {
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 24px 16px 16px;
-  }
-
-  /* ── Bottom Tab Bar ── */
-  .tab-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0; right: 0;
-    height: calc(var(--tab-h) + var(--safe-bottom));
-    padding-bottom: var(--safe-bottom);
-    background: rgba(19,19,26,0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: stretch;
-    z-index: 100;
-  }
-
-  .tab-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 8px 4px;
-    transition: color 0.2s;
-    min-height: 48px;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .tab-btn.active { color: var(--accent); }
-  .tab-btn:hover { color: var(--text); }
-
-  .tab-icon { font-size: 20px; line-height: 1; }
-  .tab-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-
-  .tab-badge {
-    position: absolute;
-    top: 6px;
-    right: calc(50% - 18px);
-    width: 8px; height: 8px;
-    background: var(--accent2);
-    border-radius: 50%;
-    border: 2px solid var(--bg);
-  }
-
-  /* ── Tab Screens ── */
-  .tab-screen { display: none; }
-  .tab-screen.active { display: block; }
-
-  /* ── Header ── */
-  .header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 28px;
-    animation: fadeUp 0.5s ease both;
-  }
-  .logo {
-    width: 40px; height: 40px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-  }
-  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
-  .logo-text span {
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-
-  /* ── Mode Toggle ── */
-  .mode-toggle {
-    display: flex;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    gap: 4px;
-    margin-bottom: 20px;
-    animation: fadeUp 0.5s ease 0.03s both;
-  }
-  .mode-btn {
-    flex: 1;
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    border: none;
-    border-radius: 9px;
-    padding: 10px 12px;
-    cursor: pointer;
-    background: transparent;
-    color: var(--muted);
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-    min-height: 48px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .mode-btn.active {
-    background: linear-gradient(135deg, var(--accent), #9b5cff);
-    color: #fff;
-    box-shadow: 0 2px 12px rgba(124,106,255,0.35);
-  }
-  .mode-btn:not(.active):hover { color: var(--text); }
-
-  /* ── Cards ── */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 22px;
-    margin-bottom: 16px;
-  }
-  .card-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 11px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 12px;
-  }
-
-  /* ── API Key ── */
-  .api-row { display: flex; gap: 10px; align-items: center; }
-  .api-status {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--muted); flex-shrink: 0; transition: background 0.3s;
-  }
-  .api-status.active { background: var(--correct); box-shadow: 0 0 8px var(--correct); }
-  .key-toggle {
-    background: none; border: none; color: var(--muted);
-    cursor: pointer; font-size: 18px; padding: 8px; flex-shrink: 0;
-    min-width: 44px; min-height: 44px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .key-toggle:hover { color: var(--text); }
-
-  /* ── Inputs ── */
-  input[type="text"], input[type="password"], input[type="number"], textarea, select {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px; /* 16px prevents iOS zoom */
-    padding: 14px 16px;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  input:focus, textarea:focus, select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(124,106,255,0.15);
-  }
-  textarea { resize: vertical; min-height: 180px; line-height: 1.6; font-size: 14px; }
-  input[type="number"] { width: 100%; }
-
-  /* ── Load strip ── */
-  .load-strip {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--surface2);
-    border: 1px dashed var(--border);
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin-bottom: 16px;
-    animation: fadeUp 0.5s ease 0.06s both;
-    cursor: pointer;
-    transition: border-color 0.2s;
-    min-height: 48px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .load-strip:hover { border-color: var(--accent); }
-  .load-strip input[type="file"] { display: none; }
-  .load-strip-icon { font-size: 22px; flex-shrink: 0; }
-  .load-strip-text { flex: 1; }
-  .load-strip-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
-  .load-strip-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-  /* ── Setup row ── */
-  .setup-row {
-    display: flex; gap: 16px;
-    align-items: flex-end; flex-wrap: wrap; margin-top: 16px;
-  }
-  .field-group { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 140px; }
-  .field-label { font-size: 13px; font-weight: 500; color: var(--muted); }
-
-  /* ── Buttons ── */
-  .btn {
-    font-family: 'Syne', sans-serif;
-    font-size: 15px; font-weight: 700;
-    border: none; border-radius: 10px;
-    cursor: pointer; padding: 14px 24px;
-    transition: all 0.2s; letter-spacing: 0.3px; white-space: nowrap;
-    min-height: 48px;
-    -webkit-tap-highlight-color: transparent;
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  }
-  .btn-primary {
-    background: linear-gradient(135deg, var(--accent), #9b5cff);
-    color: #fff; box-shadow: 0 4px 20px rgba(124,106,255,0.35);
-  }
-  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,106,255,0.45); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-secondary {
-    background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-teal {
-    background: linear-gradient(135deg, #1a9e78, #12c99a);
-    color: #fff; box-shadow: 0 4px 20px rgba(34,201,122,0.25);
-  }
-  .btn-teal:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(34,201,122,0.35); }
-  .btn-teal:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-ghost {
-    background: transparent; color: var(--muted);
-    font-size: 13px; padding: 8px 14px; min-height: 44px;
-  }
-  .btn-ghost:hover { color: var(--text); }
-  .btn-sm { padding: 10px 16px; font-size: 13px; min-height: 44px; }
-  .btn-full { width: 100%; }
-  .btn-warn {
-    background: linear-gradient(135deg, #b36200, #ffb347);
-    color: #fff;
-  }
-
-  /* ── Loading ── */
-  .loading-screen { text-align: center; padding: 80px 20px; animation: fadeUp 0.4s ease both; }
-  .spinner {
-    width: 48px; height: 48px;
-    border: 3px solid var(--border); border-top-color: var(--accent);
-    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 24px;
-  }
-  .loading-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-  .loading-sub { color: var(--muted); font-size: 14px; }
-
-  /* ── Progress bar ── */
-  .progress-wrap { background: var(--surface2); border-radius: 99px; height: 6px; margin-bottom: 28px; overflow: hidden; }
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    border-radius: 99px;
-    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
-  }
-  .progress-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .progress-text { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--muted); }
-
-  /* ── Question card ── */
-  .question-card { animation: fadeUp 0.35s ease both; }
-  .question-number { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
-  .question-text { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.4; margin-bottom: 8px; }
-  .question-instruction { font-size: 13px; color: var(--warn); font-weight: 500; margin-bottom: 20px; }
-
-  /* Source badge */
-  .source-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 11px; font-weight: 600;
-    padding: 3px 9px; border-radius: 99px;
-    margin-bottom: 16px;
-    font-family: 'Syne', sans-serif;
-    letter-spacing: 0.5px;
-  }
-  .source-badge.supplemented {
-    background: rgba(106,175,255,0.12);
-    border: 1px solid rgba(106,175,255,0.3);
-    color: #6aaeff;
-  }
-
-  /* ── Choices ── */
-  .choices { display: flex; flex-direction: column; gap: 10px; }
-  .choice {
-    background: var(--surface2); border: 1.5px solid var(--border);
-    border-radius: 12px; padding: 15px 18px;
-    cursor: pointer; display: flex; align-items: center; gap: 12px;
-    transition: all 0.18s; font-size: 15px; line-height: 1.45;
-    text-align: left; width: 100%; color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 56px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .choice:hover:not(:disabled):not(.multi-selected) { border-color: var(--accent); background: rgba(124,106,255,0.08); }
-  .choice:disabled { cursor: default; }
-  .choice-letter {
-    width: 32px; height: 32px; border-radius: 8px;
-    background: var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
-    flex-shrink: 0; transition: all 0.18s;
-  }
-  .choice.correct { border-color: var(--correct); background: rgba(34,201,122,0.1); }
-  .choice.correct .choice-letter { background: var(--correct); color: #000; }
-  .choice.wrong { border-color: var(--wrong); background: rgba(255,79,110,0.1); }
-  .choice.wrong .choice-letter { background: var(--wrong); color: #fff; }
-  .choice.reveal-correct { border-color: var(--correct); background: rgba(34,201,122,0.06); }
-  .choice.reveal-correct .choice-letter { background: var(--correct); color: #000; }
-  .choice.multi-selected { border-color: var(--accent); background: rgba(124,106,255,0.12); }
-  .choice.multi-selected .choice-letter { background: var(--accent); color: #fff; }
-  .choice-icon { margin-left: auto; font-size: 18px; flex-shrink: 0; }
-
-  /* ── Fill in the blank ── */
-  .fitb-sentence {
-    font-family: 'Syne', sans-serif;
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 2.2;
-    margin-bottom: 20px;
-    color: var(--text);
-  }
-  .fitb-blank {
-    display: inline-block;
-    min-width: 120px;
-    border-bottom: 2px solid var(--accent);
-    padding: 2px 8px;
-    margin: 0 4px;
-    background: rgba(124,106,255,0.08);
-    border-radius: 6px 6px 0 0;
-  }
-  .fitb-blank input {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    font-family: 'Syne', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--accent);
-    width: 100%;
-    min-width: 100px;
-    box-shadow: none;
-  }
-  .fitb-blank input:focus { box-shadow: none; border-color: transparent; }
-  .fitb-blank.correct-blank { border-color: var(--correct); background: rgba(34,201,122,0.1); }
-  .fitb-blank.correct-blank input { color: var(--correct); }
-  .fitb-blank.wrong-blank { border-color: var(--wrong); background: rgba(255,79,110,0.1); }
-  .fitb-blank.wrong-blank input { color: var(--wrong); }
-
-  /* ── Feedback ── */
-  .feedback {
-    margin-top: 18px; padding: 14px 18px; border-radius: 10px;
-    font-size: 14px; font-weight: 500;
-    animation: fadeUp 0.25s ease both;
-  }
-  .feedback.correct-fb { background: rgba(34,201,122,0.12); border: 1px solid rgba(34,201,122,0.3); color: #6effc0; }
-  .feedback.wrong-fb { background: rgba(255,79,110,0.12); border: 1px solid rgba(255,79,110,0.3); color: #ff8fa8; }
-  .feedback.partial-fb { background: rgba(255,179,71,0.12); border: 1px solid rgba(255,179,71,0.3); color: #ffcc80; }
-
-  .feedback-header { font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-  .feedback-detail { font-size: 13px; line-height: 1.6; }
-  .feedback-detail .missed { color: #ff8fa8; }
-  .feedback-detail .distractor-note { color: var(--muted); font-style: italic; margin-top: 6px; font-size: 12px; }
-
-  .partial-score {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255,179,71,0.15); border: 1px solid rgba(255,179,71,0.3);
-    border-radius: 99px; padding: 3px 10px;
-    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
-    color: var(--warn); margin-bottom: 10px;
-  }
-
-  .next-row { margin-top: 20px; display: flex; justify-content: flex-end; animation: fadeUp 0.3s ease 0.1s both; }
-
-  /* ── Results ── */
-  .results-header { text-align: center; padding: 32px 20px 24px; animation: fadeUp 0.4s ease both; }
-  .results-emoji { font-size: 48px; margin-bottom: 14px; }
-  .results-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; margin-bottom: 8px; }
-  .results-sub { color: var(--muted); font-size: 15px; }
-  .score-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 99px; padding: 8px 20px;
-    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-top: 14px;
-  }
-  .score-dot { width: 10px; height: 10px; border-radius: 50%; }
-
-  .review-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
-  .review-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 16px 18px;
-    animation: fadeUp 0.4s ease both;
-  }
-  .review-item.r-correct { border-left: 3px solid var(--correct); }
-  .review-item.r-wrong { border-left: 3px solid var(--wrong); }
-  .review-item.r-partial { border-left: 3px solid var(--warn); }
-  .review-q { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; }
-  .review-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .review-answers { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
-  .review-correct-ans { color: #6effc0; display: flex; gap: 6px; align-items: flex-start; }
-  .review-wrong-ans { color: #ff8fa8; display: flex; gap: 6px; align-items: flex-start; }
-  .review-partial-score { color: var(--warn); font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-
-  .results-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 12px; padding-bottom: 8px; }
-
-  /* ── Study Guide ── */
-  .study-guide-section { margin: 24px 0; animation: fadeUp 0.4s ease both; }
-
-  .sg-panel {
-    background: var(--surface);
-    border: 1px solid rgba(34,201,122,0.3);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .sg-panel-header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, rgba(34,201,122,0.1), rgba(106,255,202,0.05));
-    border-bottom: 1px solid rgba(34,201,122,0.2);
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.2s;
-    min-height: 56px;
-  }
-  .sg-panel-header:hover { background: linear-gradient(135deg, rgba(34,201,122,0.15), rgba(106,255,202,0.08)); }
-  .sg-panel-icon { font-size: 20px; flex-shrink: 0; }
-  .sg-panel-title {
-    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
-    color: #6effc0; flex: 1;
-  }
-  .sg-panel-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .sg-chevron {
-    font-size: 18px; color: var(--muted);
-    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-    flex-shrink: 0;
-  }
-  .sg-panel.open .sg-chevron { transform: rotate(180deg); }
-
-  .sg-panel-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1);
-  }
-  .sg-panel.open .sg-panel-body { max-height: 2000px; }
-  .sg-panel-inner { padding: 22px 20px; }
-
-  .sg-skeleton { display: flex; flex-direction: column; gap: 12px; }
-  .sg-skel-bar {
-    height: 14px; border-radius: 6px;
-    background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-  }
-  .sg-skel-bar.title { height: 18px; width: 55%; margin-bottom: 4px; }
-  .sg-skel-bar.short { width: 40%; }
-  .sg-skel-bar.med { width: 75%; }
-  .sg-skel-bar.full { width: 100%; }
-
-  .btn-spinner {
-    display: inline-block;
-    width: 14px; height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    vertical-align: middle;
-  }
-  .btn-teal.loading { animation: tealPulse 1.2s ease-in-out infinite; }
-  @keyframes tealPulse {
-    0%, 100% { box-shadow: 0 4px 20px rgba(34,201,122,0.25); }
-    50% { box-shadow: 0 4px 32px rgba(34,201,122,0.55), 0 0 0 4px rgba(34,201,122,0.12); }
-  }
-
-  .sg-content h3 {
-    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
-    color: #6effc0; margin: 20px 0 8px; padding-bottom: 6px;
-    border-bottom: 1px solid rgba(34,201,122,0.15);
-  }
-  .sg-content h3:first-child { margin-top: 0; }
-  .sg-content p { font-size: 14px; line-height: 1.75; color: #ccc8ee; margin-bottom: 10px; }
-  .sg-content ul { padding-left: 20px; margin-bottom: 10px; }
-  .sg-content li { font-size: 14px; line-height: 1.75; color: #ccc8ee; margin-bottom: 5px; }
-  .sg-content strong { color: var(--text); }
-  .sg-content em { color: #b8b0f0; font-style: italic; }
-
-  .sg-divider { height: 1px; background: var(--border); margin: 18px 0; }
-  .sg-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
-
-  /* ── Flashcard ── */
-  .fc-progress-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .fc-counter { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--muted); }
-
-  .flashcard-scene {
-    perspective: 1200px;
-    width: 100%; height: 280px;
-    margin-bottom: 20px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  @media (max-width: 400px) { .flashcard-scene { height: 220px; } }
-
-  .flashcard {
-    width: 100%; height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
-  }
-  .flashcard.flipped { transform: rotateY(180deg); }
-
-  .fc-face {
-    position: absolute; inset: 0;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    border-radius: var(--radius);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 28px; text-align: center;
-  }
-  .fc-front { background: var(--surface); border: 1px solid var(--border); }
-  .fc-back {
-    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(255,106,155,0.1));
-    border: 1px solid rgba(124,106,255,0.35);
-    transform: rotateY(180deg);
-  }
-  .fc-label {
-    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 14px;
-  }
-  .fc-back .fc-label { color: var(--accent); }
-  .fc-text { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; line-height: 1.5; color: var(--text); }
-  .fc-back .fc-text { font-size: 21px; color: var(--accent); }
-  .fc-hint { font-size: 12px; color: var(--muted); margin-top: 18px; }
-
-  .fc-nav {
-    display: flex; align-items: center; justify-content: center;
-    gap: 16px; margin-bottom: 20px;
-  }
-  .fc-nav-btn {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); font-size: 20px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .fc-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-  .fc-nav-btn:disabled { opacity: 0.3; cursor: default; }
-  .fc-flip-hint { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 24px; }
-  .fc-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding-bottom: 8px; }
-
-  /* ══════════════════════════════════════════════
-     NOTES TAB
-  ══════════════════════════════════════════════ */
-  .notes-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px; gap: 12px;
-  }
-  .notes-title {
-    font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
-  }
-  .save-status {
-    font-size: 12px; color: var(--muted);
-    display: flex; align-items: center; gap: 6px;
-    transition: all 0.3s;
-    white-space: nowrap;
-  }
-  .save-status.saving { color: var(--warn); }
-  .save-status.saved { color: var(--correct); }
-  .save-status-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor; flex-shrink: 0;
-  }
-
-  .notes-meta {
-    display: flex; align-items: center; gap: 8px;
-    flex-wrap: wrap; margin-bottom: 12px;
-    font-size: 12px; color: var(--muted);
-  }
-  .notes-meta-chip {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 6px; padding: 3px 8px;
-    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.5px;
-  }
-
-  .notes-editor {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    line-height: 1.7;
-    padding: 16px;
-    outline: none;
-    resize: none;
-    min-height: 320px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    overflow-y: auto;
-  }
-  .notes-editor:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(124,106,255,0.15);
-  }
-
-  .notes-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-
-  .no-file-state {
-    text-align: center; padding: 60px 20px;
-    color: var(--muted);
-  }
-  .no-file-icon { font-size: 40px; margin-bottom: 16px; }
-  .no-file-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
-  .no-file-sub { font-size: 14px; line-height: 1.6; }
-
-  /* ══════════════════════════════════════════════
-     SETTINGS TAB
-  ══════════════════════════════════════════════ */
-  .settings-section { margin-bottom: 24px; }
-  .settings-section-title {
-    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
-    letter-spacing: 2px; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 12px;
-  }
-
-  .toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border);
-    gap: 16px;
-    min-height: 56px;
-  }
-  .toggle-row:last-child { border-bottom: none; }
-  .toggle-info { flex: 1; }
-  .toggle-label { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
-  .toggle-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-  .toggle-switch {
-    position: relative;
-    width: 52px; height: 28px; flex-shrink: 0;
-  }
-  .toggle-switch input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; inset: 0;
-    background: var(--border);
-    border-radius: 99px;
-    cursor: pointer;
-    transition: background 0.25s;
-  }
-  .toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 20px; height: 20px;
-    left: 4px; top: 4px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 0.25s;
-  }
-  .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
-  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(24px); }
-
-  .scope-bar-wrap { margin-top: 16px; }
-  .scope-bar-label {
-    display: flex; justify-content: space-between;
-    font-size: 13px; color: var(--muted); margin-bottom: 8px;
-  }
-  .scope-bar-track {
-    background: var(--surface2); border-radius: 99px; height: 8px; overflow: hidden;
-  }
-  .scope-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent2), var(--accent));
-    border-radius: 99px;
-    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
-  }
-
-  /* ══════════════════════════════════════════════
-     ADMIN TAB
-  ══════════════════════════════════════════════ */
-  .admin-banner {
-    background: linear-gradient(135deg, rgba(124,106,255,0.15), rgba(255,106,155,0.1));
-    border: 1px solid rgba(124,106,255,0.3);
-    border-radius: var(--radius);
-    padding: 16px 20px;
-    margin-bottom: 20px;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .admin-banner-icon { font-size: 24px; flex-shrink: 0; }
-  .admin-banner-text { font-size: 13px; color: var(--muted); line-height: 1.5; }
-  .admin-banner-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 4px; }
-
-  /* ── Scope Check Modal overlay ── */
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(10,10,15,0.85);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 200;
-    display: flex; align-items: flex-end;
-    animation: fadeIn 0.2s ease both;
-  }
-  @media (min-width: 560px) { .modal-overlay { align-items: center; justify-content: center; } }
-
-  .modal-sheet {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px 20px 0 0;
-    width: 100%;
-    max-height: 85dvh;
-    overflow-y: auto;
-    padding: 24px 20px 32px;
-    animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1) both;
-  }
-  @media (min-width: 560px) {
-    .modal-sheet {
-      border-radius: 20px;
-      max-width: 520px;
-      max-height: 80dvh;
-    }
-  }
-
-  .modal-handle {
-    width: 40px; height: 4px;
-    background: var(--border); border-radius: 99px;
-    margin: 0 auto 20px;
-  }
-  @media (min-width: 560px) { .modal-handle { display: none; } }
-
-  .modal-title {
-    font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800;
-    margin-bottom: 6px;
-  }
-  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
-
-  .concept-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-  .concept-item {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 12px 14px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; font-size: 14px;
-  }
-  .concept-item.covered { border-color: rgba(34,201,122,0.25); background: rgba(34,201,122,0.05); }
-  .concept-item.missing { border-color: rgba(255,179,71,0.25); background: rgba(255,179,71,0.05); }
-  .concept-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .concept-text { flex: 1; line-height: 1.45; }
-  .concept-name { font-weight: 600; }
-  .concept-reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .concept-add-btn {
-    background: rgba(124,106,255,0.15); border: 1px solid rgba(124,106,255,0.3);
-    color: var(--accent); border-radius: 6px; padding: 4px 10px;
-    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
-    cursor: pointer; transition: all 0.2s; white-space: nowrap;
-    min-height: 32px; flex-shrink: 0;
-  }
-  .concept-add-btn:hover { background: rgba(124,106,255,0.25); }
-  .concept-add-btn.added { background: rgba(34,201,122,0.15); border-color: rgba(34,201,122,0.3); color: var(--correct); }
-
-  .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-  /* ── Error ── */
-  .error-box {
-    background: rgba(255,79,110,0.1); border: 1px solid rgba(255,79,110,0.35);
-    border-radius: 10px; padding: 14px 18px;
-    font-size: 14px; color: #ff8fa8; margin-top: 12px; display: none;
-  }
-  .error-box.show { display: block; }
-
-  /* ── Screens (within quiz tab) ── */
-  .screen { display: none; }
-  .screen.active { display: block; }
-
-  /* ── Animations ── */
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-  .anim-1 { animation: fadeUp 0.5s ease 0.05s both; }
-  .anim-2 { animation: fadeUp 0.5s ease 0.1s both; }
-  .anim-3 { animation: fadeUp 0.5s ease 0.15s both; }
-  .anim-4 { animation: fadeUp 0.5s ease 0.2s both; }
-
-  @media (max-width: 560px) {
-    .question-text { font-size: 17px; }
-    .choice { font-size: 14px; padding: 13px 14px; }
-    .results-title { font-size: 22px; }
-    .fc-text { font-size: 15px; }
-    .fc-back .fc-text { font-size: 18px; }
-    .btn { font-size: 14px; padding: 13px 18px; }
-  }
+:root{
+  --navy:#0d0b1e;--navy2:#13102a;--navy3:#1a1640;--navy4:#221e52;
+  --glass:rgba(255,255,255,0.04);--glass2:rgba(255,255,255,0.07);--glass3:rgba(255,255,255,0.11);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --violet:#7c6aff;--violet2:#9b8aff;--pink:#e040b0;--pink2:#f472d0;
+  --blue:#38bdf8;--teal:#2dd4bf;--amber:#fbbf24;
+  --correct:#10d47a;--wrong:#f43f5e;--warn:#f59e0b;
+  --text:#f0edff;--text2:#a89ec8;--text3:#6b6390;
+  --grad-main:linear-gradient(135deg,#7c6aff,#e040b0);
+  --grad-blue:linear-gradient(135deg,#38bdf8,#7c6aff);
+  --grad-teal:linear-gradient(135deg,#2dd4bf,#38bdf8);
+  --radius-sm:10px;--radius:16px;--radius-lg:22px;
+  --tab-h:68px;--safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--navy);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100dvh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 60% at 15% 10%,rgba(124,106,255,.18) 0%,transparent 55%),radial-gradient(ellipse 55% 50% at 85% 85%,rgba(224,64,176,.14) 0%,transparent 50%),radial-gradient(ellipse 45% 55% at 75% 15%,rgba(56,189,248,.10) 0%,transparent 45%),radial-gradient(ellipse 60% 40% at 30% 80%,rgba(45,212,191,.08) 0%,transparent 50%);pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.app-shell{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100dvh;}
+.main-content{flex:1;overflow-y:auto;padding-bottom:calc(var(--tab-h) + var(--safe-b) + 20px);}
+.container{max-width:800px;margin:0 auto;padding:28px 16px 16px;}
+.header{display:flex;align-items:center;gap:14px;margin-bottom:32px;animation:fadeUp .5s ease both;}
+.logo-svg{width:42px;height:42px;flex-shrink:0;filter:drop-shadow(0 0 12px rgba(124,106,255,.5));}
+.logo-text{font-size:22px;font-weight:800;letter-spacing:-.8px;}
+.logo-study{background:linear-gradient(90deg,#7c6aff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-pulse{background:linear-gradient(90deg,#e040b0,#fb7185);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header-file{margin-left:auto;font-size:11px;color:var(--text3);background:var(--glass2);border:1px solid var(--border);border-radius:99px;padding:4px 12px;display:none;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.header-file.show{display:flex;}
+.card{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:14px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);}
+.card-label{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--violet2);margin-bottom:14px;}
+.mode-toggle{display:flex;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px;gap:4px;margin-bottom:16px;animation:fadeUp .5s ease .03s both;}
+.mode-btn{flex:1;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:8px;padding:11px 14px;cursor:pointer;background:transparent;color:var(--text3);transition:all .25s;min-height:48px;-webkit-tap-highlight-color:transparent;}
+.mode-btn.active{background:var(--grad-main);color:#fff;box-shadow:0 4px 20px rgba(124,106,255,.4);}
+.mode-btn:not(.active):hover{color:var(--text);}
+input[type=text],input[type=password],input[type=number],textarea,select{width:100%;background:var(--glass2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;padding:14px 16px;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none;}
+input:focus,textarea:focus,select:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,106,255,.18);}
+select option{background:var(--navy2);color:var(--text);}
+textarea{resize:vertical;min-height:180px;line-height:1.65;font-size:14px;}
+.api-row{display:flex;gap:10px;align-items:center;}
+.api-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s,box-shadow .3s;}
+.api-dot.on{background:var(--correct);box-shadow:0 0 8px var(--correct);}
+.key-eye{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;}
+.key-eye:hover{color:var(--text);}
+.load-strip{display:flex;align-items:center;gap:14px;background:var(--glass);border:1px dashed var(--border2);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;cursor:pointer;transition:border-color .2s,background .2s;min-height:64px;-webkit-tap-highlight-color:transparent;animation:fadeUp .5s ease .06s both;}
+.load-strip:hover{border-color:var(--violet);background:var(--glass2);}
+.load-strip input[type=file]{display:none;}
+.strip-icon{width:38px;height:38px;border-radius:10px;background:var(--glass3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.strip-title{font-weight:700;font-size:14px;margin-bottom:2px;}
+.strip-sub{font-size:12px;color:var(--text3);}
+.setup-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:16px;}
+.field-group{display:flex;flex-direction:column;gap:8px;flex:1;min-width:130px;}
+.field-label{font-size:12px;font-weight:600;color:var(--text2);}
+.btn{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;border:none;border-radius:var(--radius-sm);cursor:pointer;padding:14px 22px;transition:all .2s;white-space:nowrap;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:7px;-webkit-tap-highlight-color:transparent;letter-spacing:.2px;}
+.btn-primary{background:var(--grad-main);color:#fff;box-shadow:0 4px 24px rgba(124,106,255,.38);}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,106,255,.5);}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;}
+.btn-secondary{background:var(--glass2);color:var(--text);border:1px solid var(--border2);}
+.btn-secondary:hover{border-color:var(--violet);color:var(--violet2);}
+.btn-teal{background:var(--grad-teal);color:#0d0b1e;box-shadow:0 4px 20px rgba(45,212,191,.3);}
+.btn-teal:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(45,212,191,.45);}
+.btn-teal:disabled{opacity:.45;cursor:not-allowed;}
+.btn-ghost{background:transparent;color:var(--text3);font-size:13px;padding:8px 14px;min-height:44px;}
+.btn-ghost:hover{color:var(--text);}
+.btn-sm{padding:10px 16px;font-size:13px;min-height:44px;}
+.btn-full{width:100%;}
+.spinner{width:44px;height:44px;border:3px solid var(--glass3);border-top-color:var(--violet);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 22px;}
+.btn-spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;}
+.btn-teal.loading{animation:tealPulse 1.2s ease-in-out infinite;}
+@keyframes tealPulse{0%,100%{box-shadow:0 4px 20px rgba(45,212,191,.3);}50%{box-shadow:0 4px 36px rgba(45,212,191,.6),0 0 0 4px rgba(45,212,191,.12);}}
+.loading-screen{text-align:center;padding:80px 20px;animation:fadeUp .4s ease both;}
+.loading-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+.loading-sub{color:var(--text3);font-size:14px;}
+.prog-wrap{background:var(--glass2);border-radius:99px;height:5px;margin-bottom:28px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--grad-main);border-radius:99px;transition:width .4s cubic-bezier(.4,0,.2,1);}
+.prog-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.prog-text{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;}
+.q-card{animation:fadeUp .35s ease both;}
+.q-num{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--violet2);margin-bottom:12px;}
+.q-text{font-size:19px;font-weight:700;line-height:1.45;margin-bottom:10px;}
+.q-instr{font-size:12px;font-weight:600;color:var(--warn);margin-bottom:18px;display:flex;align-items:center;gap:6px;}
+.src-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 10px;border-radius:99px;margin-bottom:14px;}
+.src-badge.supp{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:#38bdf8;}
+.choices{display:flex;flex-direction:column;gap:10px;}
+.choice{background:var(--glass);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:15px 17px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .18s;font-size:14px;line-height:1.5;text-align:left;width:100%;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:54px;-webkit-tap-highlight-color:transparent;}
+.choice:hover:not(:disabled):not(.ms-sel){border-color:var(--violet);background:rgba(124,106,255,.08);transform:translateX(3px);}
+.choice:disabled{cursor:default;}
+.c-letter{width:30px;height:30px;border-radius:8px;background:var(--glass3);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;transition:all .18s;}
+.choice.ms-sel{border-color:var(--violet);background:rgba(124,106,255,.1);}
+.choice.ms-sel .c-letter{background:var(--violet);color:#fff;}
+.choice.correct{border-color:var(--correct);background:rgba(16,212,122,.08);}
+.choice.correct .c-letter{background:var(--correct);color:#000;}
+.choice.wrong{border-color:var(--wrong);background:rgba(244,63,94,.08);}
+.choice.wrong .c-letter{background:var(--wrong);color:#fff;}
+.choice.rev-correct{border-color:var(--correct);background:rgba(16,212,122,.05);}
+.choice.rev-correct .c-letter{background:var(--correct);color:#000;}
+.c-icon{margin-left:auto;font-size:16px;flex-shrink:0;}
+.fitb-sent{font-size:17px;font-weight:600;line-height:2.4;margin-bottom:18px;color:var(--text);}
+.fitb-blank{display:inline-block;min-width:110px;border-bottom:2px solid var(--violet);padding:2px 8px;margin:0 4px;background:rgba(124,106,255,.07);border-radius:6px 6px 0 0;transition:border-color .2s;}
+.fitb-blank input{background:transparent;border:none;border-radius:0;padding:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;color:var(--violet2);width:100%;min-width:90px;box-shadow:none;}
+.fitb-blank input:focus{box-shadow:none;border-color:transparent;}
+.fitb-blank.ok{border-color:var(--correct);background:rgba(16,212,122,.08);}
+.fitb-blank.ok input{color:var(--correct);}
+.fitb-blank.bad{border-color:var(--wrong);background:rgba(244,63,94,.08);}
+.fitb-blank.bad input{color:var(--wrong);}
+.feedback{margin-top:16px;padding:14px 17px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;animation:fadeUp .25s ease both;}
+.fb-head{font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:7px;font-size:14px;}
+.fb-detail{line-height:1.65;opacity:.9;}
+.fb-detail .missed{color:#ff8fa8;}
+.fb-detail .dist-note{color:var(--text3);font-style:italic;margin-top:6px;font-size:12px;}
+.fb-correct{background:rgba(16,212,122,.1);border:1px solid rgba(16,212,122,.25);color:#6effc0;}
+.fb-wrong{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:#ff8fa8;}
+.fb-partial{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fcd34d;}
+.part-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:700;color:var(--warn);margin-bottom:8px;}
+.next-row{margin-top:18px;display:flex;justify-content:flex-end;animation:fadeUp .3s ease .1s both;}
+.results-head{text-align:center;padding:36px 20px 28px;animation:fadeUp .4s ease both;}
+.res-emoji{font-size:52px;margin-bottom:14px;}
+.res-title{font-size:28px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px;}
+.res-sub{color:var(--text2);font-size:14px;}
+.score-pill{display:inline-flex;align-items:center;gap:9px;background:var(--glass2);border:1px solid var(--border2);border-radius:99px;padding:9px 22px;font-weight:700;font-size:16px;margin-top:16px;}
+.score-dot{width:10px;height:10px;border-radius:50%;}
+.review-list{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+.review-item{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;animation:fadeUp .4s ease both;}
+.ri-correct{border-left:3px solid var(--correct);}
+.ri-wrong{border-left:3px solid var(--wrong);}
+.ri-partial{border-left:3px solid var(--warn);}
+.ri-q{font-weight:600;font-size:14px;margin-bottom:9px;display:flex;gap:9px;align-items:flex-start;}
+.ri-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.ri-ans{display:flex;flex-direction:column;gap:4px;font-size:13px;}
+.ri-ok{color:#6effc0;display:flex;gap:6px;align-items:flex-start;}
+.ri-bad{color:#ff8fa8;display:flex;gap:6px;align-items:flex-start;}
+.ri-pscore{color:var(--warn);font-size:11px;font-weight:700;margin-bottom:4px;}
+.res-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;padding-bottom:8px;}
+.sg-section{margin:22px 0;animation:fadeUp .4s ease both;}
+.sg-panel{background:var(--glass);border:1px solid rgba(45,212,191,.25);border-radius:var(--radius);overflow:hidden;}
+.sg-head{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;background:linear-gradient(135deg,rgba(45,212,191,.08),rgba(56,189,248,.05));border-bottom:1px solid rgba(45,212,191,.15);transition:background .2s;min-height:56px;}
+.sg-head:hover{background:linear-gradient(135deg,rgba(45,212,191,.12),rgba(56,189,248,.08));}
+.sg-title{font-weight:700;font-size:14px;color:#6effc0;flex:1;}
+.sg-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.sg-chev{font-size:18px;color:var(--text3);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+.sg-panel.open .sg-chev{transform:rotate(180deg);}
+.sg-body{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1);}
+.sg-panel.open .sg-body{max-height:2400px;}
+.sg-inner{padding:22px 20px;}
+.sg-skel{display:flex;flex-direction:column;gap:11px;}
+.skel{height:13px;border-radius:6px;background:linear-gradient(90deg,var(--glass2) 25%,var(--glass3) 50%,var(--glass2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+.skel.t{height:17px;width:52%;}.skel.s{width:38%;}.skel.m{width:72%;}.skel.f{width:100%;}
+.sg-content h3{font-size:14px;font-weight:700;color:#6effc0;margin:20px 0 8px;padding-bottom:5px;border-bottom:1px solid rgba(45,212,191,.12);}
+.sg-content h3:first-child{margin-top:0;}
+.sg-content p{font-size:14px;line-height:1.75;color:#ccc8ee;margin-bottom:9px;}
+.sg-content ul{padding-left:20px;margin-bottom:9px;}
+.sg-content li{font-size:14px;line-height:1.75;color:#ccc8ee;margin-bottom:4px;}
+.sg-content strong{color:var(--text);}
+.sg-content em{color:#b8b0f0;font-style:italic;}
+.sg-divider{height:1px;background:var(--border);margin:16px 0;}
+.sg-acts{display:flex;gap:9px;flex-wrap:wrap;}
+.fc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.fc-count{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;}
+.fc-scene{perspective:1200px;width:100%;height:270px;margin-bottom:20px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+@media(max-width:400px){.fc-scene{height:220px;}}
+.fc-card{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,0,.2,1);}
+.fc-card.flipped{transform:rotateY(180deg);}
+.fc-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;}
+.fc-front{background:var(--glass);border:1px solid var(--border);}
+.fc-back{background:linear-gradient(135deg,rgba(124,106,255,.18),rgba(224,64,176,.12));border:1px solid rgba(124,106,255,.3);transform:rotateY(180deg);}
+.fc-lbl{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;}
+.fc-back .fc-lbl{color:var(--violet2);}
+.fc-txt{font-size:17px;font-weight:700;line-height:1.5;color:var(--text);}
+.fc-back .fc-txt{font-size:21px;color:var(--violet2);}
+.fc-hint{font-size:12px;color:var(--text3);margin-top:18px;}
+.fc-nav{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px;}
+.fc-nb{width:48px;height:48px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.fc-nb:hover:not(:disabled){border-color:var(--violet);color:var(--violet2);}
+.fc-nb:disabled{opacity:.28;cursor:default;}
+.fc-flip-hint{text-align:center;font-size:12px;color:var(--text3);margin-bottom:22px;}
+.fc-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-bottom:8px;}
+.notes-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;}
+.notes-title{font-size:18px;font-weight:800;letter-spacing:-.3px;}
+.save-status{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;transition:all .3s;white-space:nowrap;}
+.save-status.saving{color:var(--warn);}
+.save-status.saved{color:var(--correct);}
+.save-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.notes-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--text3);}
+.meta-chip{background:var(--glass2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:10px;font-weight:700;letter-spacing:.8px;}
+.notes-editor{width:100%;background:var(--glass2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;line-height:1.7;padding:16px;outline:none;resize:none;min-height:320px;transition:border-color .2s,box-shadow .2s;}
+.notes-editor:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,106,255,.15);}
+.notes-acts{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px;}
+.no-file{text-align:center;padding:60px 20px;color:var(--text3);}
+.no-file-icon{width:64px;height:64px;border-radius:20px;background:var(--glass2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px;}
+.no-file-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.no-file-sub{font-size:14px;line-height:1.6;}
+.settings-section{margin-bottom:22px;}
+.settings-label{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--violet2);margin-bottom:10px;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);gap:16px;min-height:56px;}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-info{flex:1;}
+.tgl-label{font-weight:600;font-size:14px;margin-bottom:2px;}
+.tgl-desc{font-size:12px;color:var(--text3);line-height:1.5;}
+.toggle-sw{position:relative;width:50px;height:27px;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;}
+.tgl-track{position:absolute;inset:0;background:var(--glass3);border-radius:99px;cursor:pointer;transition:background .25s;border:1px solid var(--border);}
+.tgl-track::before{content:'';position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .25s;}
+.toggle-sw input:checked+.tgl-track{background:var(--violet);}
+.toggle-sw input:checked+.tgl-track::before{transform:translateX(23px);}
+.scope-bar{margin-top:14px;}
+.scope-bar-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:7px;}
+.scope-bar-track{background:var(--glass2);border-radius:99px;height:7px;overflow:hidden;}
+.scope-bar-fill{height:100%;background:var(--grad-main);border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.admin-banner{background:linear-gradient(135deg,rgba(124,106,255,.12),rgba(224,64,176,.08));border:1px solid rgba(124,106,255,.25);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px;}
+.admin-icon{width:42px;height:42px;border-radius:12px;background:var(--grad-main);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.admin-title{font-weight:700;font-size:14px;margin-bottom:4px;}
+.admin-desc{font-size:13px;color:var(--text3);line-height:1.55;}
+.modal-overlay{position:fixed;inset:0;background:rgba(13,11,30,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;animation:fadeIn .2s ease both;}
+@media(min-width:560px){.modal-overlay{align-items:center;justify-content:center;}}
+.modal-sheet{background:var(--navy2);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-height:88dvh;overflow-y:auto;padding:24px 20px 36px;animation:slideUp .3s cubic-bezier(.4,0,.2,1) both;}
+@media(min-width:560px){.modal-sheet{border-radius:24px;max-width:520px;max-height:82dvh;}}
+.modal-handle{width:38px;height:4px;background:var(--border2);border-radius:99px;margin:0 auto 22px;}
+@media(min-width:560px){.modal-handle{display:none;}}
+.modal-title{font-size:19px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px;}
+.modal-sub{font-size:13px;color:var(--text3);margin-bottom:20px;line-height:1.55;}
+.concept-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.concept-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;}
+.concept-item.covered{border-color:rgba(16,212,122,.2);background:rgba(16,212,122,.04);}
+.concept-item.missing{border-color:rgba(245,158,11,.2);background:rgba(245,158,11,.04);}
+.concept-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.concept-name{font-weight:600;line-height:1.4;}
+.concept-reason{font-size:12px;color:var(--text3);margin-top:2px;}
+.concept-add{background:rgba(124,106,255,.12);border:1px solid rgba(124,106,255,.25);color:var(--violet2);border-radius:7px;padding:4px 11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;min-height:32px;flex-shrink:0;}
+.concept-add:hover{background:rgba(124,106,255,.22);}
+.concept-add.added{background:rgba(16,212,122,.12);border-color:rgba(16,212,122,.25);color:var(--correct);}
+.modal-acts{display:flex;gap:10px;flex-wrap:wrap;}
+.err-box{background:rgba(244,63,94,.09);border:1px solid rgba(244,63,94,.3);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#ff8fa8;margin-top:10px;display:none;}
+.err-box.show{display:block;}
+.screen{display:none;}.screen.active{display:block;}
+.tab-screen{display:none;}.tab-screen.active{display:block;}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:rgba(13,11,30,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:stretch;z-index:100;}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;color:var(--text3);cursor:pointer;padding:8px 4px;transition:color .2s;min-height:48px;-webkit-tap-highlight-color:transparent;position:relative;}
+.tab-btn.active{color:var(--violet2);}
+.tab-btn:hover{color:var(--text2);}
+.tab-btn.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--grad-main);border-radius:99px 99px 0 0;}
+.tab-icon{font-size:19px;line-height:1;}
+.tab-lbl{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideUp{from{transform:translateY(44px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.a1{animation:fadeUp .5s ease .05s both;}.a2{animation:fadeUp .5s ease .10s both;}.a3{animation:fadeUp .5s ease .15s both;}
+@media(max-width:560px){.q-text{font-size:17px;}.choice{font-size:13px;padding:13px 14px;}.res-title{font-size:22px;}.fc-txt{font-size:15px;}.fc-back .fc-txt{font-size:18px;}.btn{font-size:13px;padding:12px 16px;}}
 </style>
 </head>
 <body>
 <div class="app-shell">
+<div class="main-content"><div class="container">
 
-  <!-- ══════════════════════════════════════════════════════
-       MAIN SCROLLABLE CONTENT
-  ══════════════════════════════════════════════════════ -->
-  <div class="main-content">
-    <div class="container">
+<div class="header">
+  <svg class="logo-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3a2d8f"/><stop offset="100%" stop-color="#1a1060"/></linearGradient>
+      <linearGradient id="lg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6c5ce7"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+      <linearGradient id="lg3" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#fda4af"/><stop offset="100%" stop-color="#f9a8d4"/></linearGradient>
+      <linearGradient id="lg4" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#fdba74"/><stop offset="100%" stop-color="#fcd34d"/></linearGradient>
+      <linearGradient id="lg5" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="50%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#fb7185"/></linearGradient>
+      <linearGradient id="lg6" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#fde68a"/><stop offset="100%" stop-color="#f97316"/></linearGradient>
+      <filter id="f1"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#6c5ce7" flood-opacity="0.5"/></filter>
+      <filter id="f2"><feGaussianBlur stdDeviation="1.5" result="b"/><feComposite in="SourceGraphic" in2="b" operator="over"/></filter>
+    </defs>
+    <circle cx="60" cy="60" r="52" fill="#0f0a2e" opacity="0.5"/>
+    <polyline points="6,60 22,60 27,50 32,70 37,44 42,64 48,60 56,60" fill="none" stroke="url(#lg5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#f2)" opacity="0.9"/>
+    <polyline points="66,60 74,60 79,50 84,70 89,44 94,64 98,60 114,60" fill="none" stroke="url(#lg5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#f2)" opacity="0.9"/>
+    <rect x="42" y="22" width="38" height="68" rx="7" fill="url(#lg1)" stroke="#5b4fcf" stroke-width="1.5" filter="url(#f1)"/>
+    <rect x="46" y="30" width="30" height="52" rx="4" fill="url(#lg2)" opacity="0.9"/>
+    <rect x="55" y="27" width="12" height="3" rx="1.5" fill="#0f0a2e" opacity="0.8"/>
+    <rect x="56" y="84" width="10" height="2" rx="1" fill="#8b7cf8" opacity="0.7"/>
+    <circle cx="51" cy="38" r="1" fill="#e0d7ff" opacity="0.6"/>
+    <circle cx="68" cy="34" r="0.8" fill="#e0d7ff" opacity="0.5"/>
+    <rect x="48" y="46" width="26" height="22" rx="3" fill="#f472b6" opacity="0.9"/>
+    <path d="M50 47 Q56 44 61 46 L61 66 Q56 64 50 67 Z" fill="url(#lg3)" opacity="0.95"/>
+    <path d="M61 46 Q67 44 72 47 L72 67 Q67 64 61 66 Z" fill="url(#lg4)" opacity="0.95"/>
+    <line x1="61" y1="46" x2="61" y2="66" stroke="#f472b6" stroke-width="1" opacity="0.8"/>
+    <line x1="53" y1="51" x2="59" y2="50" stroke="#f9a8d4" stroke-width="0.7" opacity="0.6"/>
+    <line x1="53" y1="55" x2="59" y2="54" stroke="#f9a8d4" stroke-width="0.7" opacity="0.6"/>
+    <line x1="63" y1="50" x2="69" y2="51" stroke="#fde68a" stroke-width="0.7" opacity="0.6"/>
+    <line x1="63" y1="54" x2="69" y2="55" stroke="#fde68a" stroke-width="0.7" opacity="0.6"/>
+    <circle cx="82" cy="24" r="8" fill="#f97316" opacity="0.15"/>
+    <path d="M77 24 Q77 18 82 16 Q87 18 87 24 Q87 28 84.5 29.5 L79.5 29.5 Q77 28 77 24 Z" fill="url(#lg6)" opacity="0.95"/>
+    <rect x="80" y="29.5" width="4" height="2" rx="0.8" fill="#f97316" opacity="0.8"/>
+    <path d="M80.5 26.5 Q82 24.5 83.5 26.5" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.7"/>
+    <line x1="82" y1="13" x2="82" y2="10" stroke="#fde68a" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+    <line x1="86" y1="15" x2="88" y2="13" stroke="#fde68a" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+    <line x1="78" y1="15" x2="76" y2="13" stroke="#fde68a" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+  </svg>
+  <div class="logo-text"><span class="logo-study">Study</span><span class="logo-pulse">Pulse</span></div>
+  <div class="header-file" id="header-file"></div>
+</div>
 
-      <!-- Header -->
-      <div class="header">
-        <div class="logo">⚡</div>
-        <div class="logo-text"><span>Study</span>Pulse</div>
-        <div class="header-right" id="header-file-name" style="font-size:12px;color:var(--muted);"></div>
+<!-- QUIZ TAB -->
+<div id="tab-quiz" class="tab-screen active">
+  <div id="screen-setup" class="screen active">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-quiz-btn" onclick="setMode('quiz')">⚡ Quiz</button>
+      <button class="mode-btn" id="mode-fc-btn" onclick="setMode('flashcard')">🃏 Flashcard</button>
+    </div>
+    <div class="card a1">
+      <div class="card-label">API Key</div>
+      <div class="api-row">
+        <div class="api-dot" id="api-dot"></div>
+        <input type="password" id="api-key" placeholder="sk-ant-api03-…" style="flex:1" autocomplete="off"/>
+        <button class="key-eye" onclick="toggleKey()">👁</button>
       </div>
-
-      <!-- ══ QUIZ TAB CONTENT ══ -->
-      <div id="tab-quiz" class="tab-screen active">
-
-        <!-- SETUP SCREEN -->
-        <div id="screen-setup" class="screen active">
-
-          <div class="mode-toggle">
-            <button class="mode-btn active" id="mode-quiz-btn" onclick="setMode('quiz')">⚡ Quiz</button>
-            <button class="mode-btn" id="mode-fc-btn" onclick="setMode('flashcard')">🃏 Flashcard</button>
-          </div>
-
-          <!-- API Key -->
-          <div class="card anim-1">
-            <div class="card-label">API Key</div>
-            <div class="api-row">
-              <div class="api-status" id="api-status"></div>
-              <input type="password" id="api-key-input" placeholder="sk-ant-api03-…" style="flex:1" autocomplete="off" />
-              <button class="key-toggle" id="key-toggle" title="Show/hide">👁</button>
-            </div>
-            <div style="font-size:12px;color:var(--muted);margin-top:8px;">Held in memory only — not persisted.</div>
-          </div>
-
-          <!-- Load File -->
-          <label class="load-strip" id="load-strip">
-            <input type="file" id="load-file-input" accept=".json" onchange="loadSession(event)" />
-            <div class="load-strip-icon">📂</div>
-            <div class="load-strip-text">
-              <div class="load-strip-title">Load Study File</div>
-              <div class="load-strip-sub">Load an admin-created study file (.json)</div>
-            </div>
-            <div style="color:var(--muted);font-size:20px;">›</div>
-          </label>
-
-          <!-- Content (shown when no file loaded) -->
-          <div id="content-card" class="card anim-2">
-            <div class="card-label">Study Content</div>
-            <textarea id="content-input" placeholder="Paste your notes, slide content, or article here. Or load a study file above."></textarea>
-          </div>
-
-          <!-- Quiz Settings -->
-          <div class="card anim-3" id="quiz-settings">
-            <div class="card-label">Quiz Settings</div>
-
-            <!-- Scope toggle (shown when file loaded) -->
-            <div id="scope-toggle-row" style="display:none;margin-bottom:16px;">
-              <div class="toggle-row" style="border:none;padding:0;">
-                <div class="toggle-info">
-                  <div class="toggle-label">Full Scope Mode</div>
-                  <div class="toggle-desc">Supplement gaps beyond your notes using standard curriculum</div>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="scope-toggle" onchange="onScopeToggle()" />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-              <div id="scope-bar-section" style="display:none" class="scope-bar-wrap">
-                <div class="scope-bar-label">
-                  <span>Coverage from your notes</span>
-                  <span id="scope-pct-label">–</span>
-                </div>
-                <div class="scope-bar-track"><div class="scope-bar-fill" id="scope-bar-fill" style="width:0%"></div></div>
-              </div>
-            </div>
-
-            <div class="setup-row">
-              <div class="field-group">
-                <div class="field-label">Questions</div>
-                <input type="number" id="num-questions" value="10" min="3" max="25" />
-              </div>
-              <div class="field-group">
-                <div class="field-label">Difficulty</div>
-                <select id="difficulty">
-                  <option value="standard">Standard</option>
-                  <option value="challenging">Challenging</option>
-                  <option value="easy">Easy</option>
-                </select>
-              </div>
-              <div class="field-group" style="min-width:100%">
-                <button class="btn btn-primary btn-full" onclick="generateQuiz()">Generate Quiz ⚡</button>
-              </div>
-            </div>
-            <div class="error-box" id="setup-error"></div>
-          </div>
-
-          <!-- Flashcard Settings -->
-          <div class="card anim-3" id="fc-settings" style="display:none">
-            <div class="card-label">Flashcard Settings</div>
-            <div class="setup-row">
-              <div class="field-group">
-                <div class="field-label">Number of cards</div>
-                <input type="number" id="num-cards" value="15" min="5" max="40" />
-              </div>
-              <div class="field-group" style="min-width:100%">
-                <button class="btn btn-primary btn-full" onclick="generateFlashcards()">Generate Flashcards 🃏</button>
-              </div>
-            </div>
-            <div class="error-box" id="fc-setup-error"></div>
-          </div>
-
-        </div><!-- /screen-setup -->
-
-        <!-- LOADING SCREEN -->
-        <div id="screen-loading" class="screen">
-          <div class="loading-screen">
-            <div class="spinner"></div>
-            <div class="loading-title" id="loading-title">Generating your quiz…</div>
-            <div class="loading-sub" id="loading-sub">Claude is reading your content and crafting questions.</div>
-          </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;">Held in memory only — never stored.</div>
+    </div>
+    <label class="load-strip">
+      <input type="file" id="load-input" accept=".json" onchange="loadFile(event)"/>
+      <div class="strip-icon">📂</div>
+      <div style="flex:1"><div class="strip-title">Load Study File</div><div class="strip-sub">Load an admin-created study file (.json)</div></div>
+      <div style="color:var(--text3);font-size:20px;">›</div>
+    </label>
+    <div class="card a2" id="content-card">
+      <div class="card-label">Study Content</div>
+      <textarea id="content-input" placeholder="Paste your notes, slides, or article here. Or load a study file above."></textarea>
+    </div>
+    <div class="card a3" id="quiz-settings">
+      <div class="card-label">Quiz Settings</div>
+      <div id="scope-toggle-row" style="display:none;margin-bottom:16px;">
+        <div class="toggle-row" style="border:none;padding:0;">
+          <div class="toggle-info"><div class="tgl-label">Full Scope Mode</div><div class="tgl-desc">Supplement gaps against standard curriculum</div></div>
+          <label class="toggle-sw"><input type="checkbox" id="scope-toggle" onchange="onScopeToggle()"/><span class="tgl-track"></span></label>
         </div>
-
-        <!-- QUIZ SCREEN -->
-        <div id="screen-quiz" class="screen">
-          <div class="progress-label">
-            <span class="progress-text" id="progress-text">Question 1 of 10</span>
-            <button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-          </div>
-          <div id="question-area"></div>
+        <div id="scope-bar-wrap" style="display:none" class="scope-bar">
+          <div class="scope-bar-labels"><span>Coverage from notes</span><span id="scope-pct">–</span></div>
+          <div class="scope-bar-track"><div class="scope-bar-fill" id="scope-bar" style="width:0%"></div></div>
         </div>
-
-        <!-- RESULTS SCREEN -->
-        <div id="screen-results" class="screen">
-          <div class="results-header">
-            <div class="results-emoji" id="results-emoji">🎉</div>
-            <div class="results-title" id="results-title">Quiz Complete!</div>
-            <div class="results-sub" id="results-sub">Here's how you did:</div>
-            <div class="score-badge">
-              <div class="score-dot" id="score-dot"></div>
-              <span id="score-text"></span>
-            </div>
-          </div>
-
-          <div id="study-guide-section" class="study-guide-section" style="display:none">
-            <div style="text-align:center;margin-bottom:16px;">
-              <button class="btn btn-teal" id="study-guide-btn" onclick="generateStudyGuide()">
-                📖 Generate Study Guide for Missed Topics
-              </button>
-              <div style="font-size:12px;color:var(--muted);margin-top:8px;">Claude explains concepts you missed in plain language</div>
-            </div>
-            <div class="sg-panel" id="sg-panel" style="display:none">
-              <div class="sg-panel-header" onclick="toggleSgPanel()">
-                <div class="sg-panel-icon">📖</div>
-                <div style="flex:1">
-                  <div class="sg-panel-title">Study Guide — Missed Topics</div>
-                  <div class="sg-panel-subtitle" id="sg-panel-subtitle">Click to expand</div>
-                </div>
-                <div class="sg-chevron">⌄</div>
-              </div>
-              <div class="sg-panel-body">
-                <div class="sg-panel-inner">
-                  <div id="study-guide-output"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="review-list" id="review-list"></div>
-
-          <div class="results-actions">
-            <button class="btn btn-primary" onclick="tryAgain()">🔄 New Questions</button>
-            <button class="btn btn-secondary" onclick="saveQuizSession()">💾 Save Session</button>
-            <button class="btn btn-secondary" onclick="resetToSetup()">📝 New Content</button>
-          </div>
+      </div>
+      <div class="setup-row">
+        <div class="field-group"><div class="field-label">Questions</div><input type="number" id="num-q" value="15" min="3" max="30"/></div>
+        <div class="field-group"><div class="field-label">Difficulty</div>
+          <select id="difficulty"><option value="challenging">Challenging</option><option value="standard">Standard</option><option value="easy">Easy</option></select>
         </div>
+        <div class="field-group" style="min-width:100%"><button class="btn btn-primary btn-full" onclick="generateQuiz()">Generate Quiz ⚡</button></div>
+      </div>
+      <div class="err-box" id="setup-err"></div>
+    </div>
+    <div class="card a3" id="fc-settings" style="display:none">
+      <div class="card-label">Flashcard Settings</div>
+      <div class="setup-row">
+        <div class="field-group"><div class="field-label">Number of cards</div><input type="number" id="num-fc" value="15" min="5" max="40"/></div>
+        <div class="field-group" style="min-width:100%"><button class="btn btn-primary btn-full" onclick="generateFlashcards()">Generate Flashcards 🃏</button></div>
+      </div>
+      <div class="err-box" id="fc-err"></div>
+    </div>
+  </div>
 
-        <!-- FLASHCARD SCREEN -->
-        <div id="screen-flashcard" class="screen">
-          <div class="fc-progress-label">
-            <span class="fc-counter" id="fc-counter">Card 1 of 15</span>
-            <button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-fill" id="fc-progress-fill" style="width:0%"></div>
-          </div>
-          <div class="flashcard-scene" onclick="flipCard()">
-            <div class="flashcard" id="flashcard">
-              <div class="fc-face fc-front">
-                <div class="fc-label">Definition</div>
-                <div class="fc-text" id="fc-front-text">Loading…</div>
-                <div class="fc-hint">Tap to reveal the term</div>
-              </div>
-              <div class="fc-face fc-back">
-                <div class="fc-label">Term</div>
-                <div class="fc-text" id="fc-back-text">…</div>
-              </div>
-            </div>
-          </div>
-          <div class="fc-flip-hint" id="fc-flip-hint">Tap the card to flip it</div>
-          <div class="fc-nav">
-            <button class="fc-nav-btn" id="fc-prev" onclick="fcNav(-1)" disabled>‹</button>
-            <span style="font-family:'Syne',sans-serif;font-size:13px;color:var(--muted)" id="fc-nav-label">1 / 15</span>
-            <button class="fc-nav-btn" id="fc-next" onclick="fcNav(1)">›</button>
-          </div>
-          <div class="fc-actions">
-            <button class="btn btn-primary" onclick="shuffleAndRestart()">🔀 Shuffle</button>
-            <button class="btn btn-secondary" onclick="saveFcSession()">💾 Save</button>
-            <button class="btn btn-secondary" onclick="resetToSetup()">📝 New</button>
-          </div>
+  <div id="screen-loading" class="screen">
+    <div class="loading-screen"><div class="spinner"></div><div class="loading-title" id="load-title">Generating your quiz…</div><div class="loading-sub" id="load-sub">Claude is reading your content and crafting questions.</div></div>
+  </div>
+
+  <div id="screen-quiz" class="screen">
+    <div class="prog-label"><span class="prog-text" id="prog-text">Question 1 of 15</span><button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button></div>
+    <div class="prog-wrap"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div id="q-area"></div>
+  </div>
+
+  <div id="screen-results" class="screen">
+    <div class="results-head">
+      <div class="res-emoji" id="res-emoji">🎉</div>
+      <div class="res-title" id="res-title">Quiz Complete!</div>
+      <div class="res-sub" id="res-sub"></div>
+      <div class="score-pill"><div class="score-dot" id="score-dot"></div><span id="score-txt"></span></div>
+    </div>
+    <div id="sg-section" class="sg-section" style="display:none">
+      <div style="text-align:center;margin-bottom:14px;">
+        <button class="btn btn-teal" id="sg-btn" onclick="generateStudyGuide()">📖 Generate Study Guide</button>
+        <div style="font-size:12px;color:var(--text3);margin-top:7px;">Claude explains concepts you missed</div>
+      </div>
+      <div class="sg-panel" id="sg-panel" style="display:none">
+        <div class="sg-head" onclick="toggleSg()">
+          <span style="font-size:18px">📖</span>
+          <div style="flex:1"><div class="sg-title">Study Guide — Missed Topics</div><div class="sg-sub" id="sg-sub">Click to expand</div></div>
+          <span class="sg-chev">⌄</span>
         </div>
+        <div class="sg-body"><div class="sg-inner"><div id="sg-out"></div></div></div>
+      </div>
+    </div>
+    <div class="review-list" id="review-list"></div>
+    <div class="res-actions">
+      <button class="btn btn-primary" onclick="tryAgain()">🔄 New Questions</button>
+      <button class="btn btn-secondary" onclick="saveSession()">💾 Save</button>
+      <button class="btn btn-secondary" onclick="resetToSetup()">📝 New Content</button>
+    </div>
+  </div>
 
-      </div><!-- /tab-quiz -->
+  <div id="screen-fc" class="screen">
+    <div class="fc-head"><span class="fc-count" id="fc-count">Card 1 of 15</span><button class="btn btn-ghost" onclick="resetToSetup()">✕ Exit</button></div>
+    <div class="prog-wrap"><div class="prog-fill" id="fc-prog" style="width:0%"></div></div>
+    <div class="fc-scene" onclick="flipCard()">
+      <div class="fc-card" id="fc-card">
+        <div class="fc-face fc-front"><div class="fc-lbl">Definition</div><div class="fc-txt" id="fc-front">Loading…</div><div class="fc-hint">Tap to reveal the term</div></div>
+        <div class="fc-face fc-back"><div class="fc-lbl">Term</div><div class="fc-txt" id="fc-back">…</div></div>
+      </div>
+    </div>
+    <div class="fc-flip-hint" id="fc-hint">Tap the card to flip it</div>
+    <div class="fc-nav">
+      <button class="fc-nb" id="fc-prev" onclick="fcNav(-1)" disabled>‹</button>
+      <span style="font-size:12px;color:var(--text3);font-weight:700" id="fc-nav-lbl">1/15</span>
+      <button class="fc-nb" id="fc-next" onclick="fcNav(1)">›</button>
+    </div>
+    <div class="fc-acts">
+      <button class="btn btn-primary" onclick="shuffleFc()">🔀 Shuffle</button>
+      <button class="btn btn-secondary" onclick="saveFc()">💾 Save</button>
+      <button class="btn btn-secondary" onclick="resetToSetup()">📝 New</button>
+    </div>
+  </div>
+</div>
 
-      <!-- ══ NOTES TAB CONTENT ══ -->
-      <div id="tab-notes" class="tab-screen">
-        <div id="notes-no-file" class="no-file-state">
-          <div class="no-file-icon">📝</div>
-          <div class="no-file-title">No Study File Loaded</div>
-          <div class="no-file-sub">Load a study file from the Quiz tab, or create one in the Admin tab. Your notes will appear here for editing.</div>
-        </div>
+<!-- NOTES TAB -->
+<div id="tab-notes" class="tab-screen">
+  <div id="notes-empty" class="no-file">
+    <div class="no-file-icon">📝</div>
+    <div class="no-file-title">No Study File Loaded</div>
+    <div class="no-file-sub">Load a study file from the Quiz tab, or create one in Admin.</div>
+  </div>
+  <div id="notes-area" style="display:none">
+    <div class="notes-header">
+      <div class="notes-title" id="notes-title">My Notes</div>
+      <div class="save-status" id="save-status"><div class="save-dot"></div><span id="save-txt">Unsaved</span></div>
+    </div>
+    <div class="notes-meta" id="notes-meta"></div>
+    <textarea class="notes-editor" id="notes-editor" placeholder="Add notes in markdown…&#10;&#10;# Unit Title&#10;- Key concept 1" oninput="onNotesInput()"></textarea>
+    <div class="notes-acts">
+      <button class="btn btn-primary btn-sm" onclick="saveNotes()">💾 Save Notes</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadFile()">⬇️ Download File</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyJson()">📋 Copy JSON</button>
+    </div>
+  </div>
+</div>
 
-        <div id="notes-editor-area" style="display:none">
-          <div class="notes-header">
-            <div class="notes-title" id="notes-unit-title">My Notes</div>
-            <div class="save-status" id="save-status">
-              <div class="save-status-dot"></div>
-              <span id="save-status-text">Unsaved</span>
-            </div>
-          </div>
+<!-- SETTINGS TAB -->
+<div id="tab-settings" class="tab-screen">
+  <div class="settings-section">
+    <div class="settings-label">Question Scope</div>
+    <div class="card" style="margin:0">
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="tgl-label">Full Scope Mode</div><div class="tgl-desc">Supplement missing curriculum concepts. Supplemented questions show a 🔵 badge.</div></div>
+        <label class="toggle-sw"><input type="checkbox" id="s-scope" onchange="syncScope()"/><span class="tgl-track"></span></label>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-label">Question Types</div>
+    <div class="card" style="margin:0">
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="tgl-label">Multi-Select Questions</div><div class="tgl-desc">Include "choose exactly N" questions with partial credit</div></div>
+        <label class="toggle-sw"><input type="checkbox" id="s-multi" checked/><span class="tgl-track"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info"><div class="tgl-label">Fill-in-the-Blank</div><div class="tgl-desc">Include paired sentence completion questions</div></div>
+        <label class="toggle-sw"><input type="checkbox" id="s-fitb" checked/><span class="tgl-track"></span></label>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-label">Loaded File</div>
+    <div class="card" id="s-file-info" style="margin:0"><div style="color:var(--text3);font-size:14px;">No study file loaded.</div></div>
+  </div>
+</div>
 
-          <div class="notes-meta" id="notes-meta"></div>
+<!-- ADMIN TAB -->
+<div id="tab-admin" class="tab-screen">
+  <div class="admin-banner">
+    <div class="admin-icon">⚙️</div>
+    <div><div class="admin-title">Admin — Create Study File</div><div class="admin-desc">Paste the unit name and study notes. Generate a file to send to the student once.</div></div>
+  </div>
+  <div class="card a1">
+    <div class="card-label">API Key</div>
+    <div class="api-row">
+      <div class="api-dot" id="admin-dot"></div>
+      <input type="password" id="admin-key" placeholder="sk-ant-api03-…" style="flex:1" autocomplete="off" oninput="onAdminKey()"/>
+      <button class="key-eye" onclick="toggleAdminKey()">👁</button>
+    </div>
+  </div>
+  <div class="card a2"><div class="card-label">Unit Name</div><input type="text" id="admin-unit" placeholder="e.g. Cell Division and Cell Differentiation"/></div>
+  <div class="card a2"><div class="card-label">Study Notes (Markdown)</div><textarea id="admin-notes" placeholder="Paste study material in markdown…"></textarea></div>
+  <div class="card a3"><button class="btn btn-primary btn-full" onclick="adminGenerate()">Generate Study File ⚡</button></div>
+  <div class="err-box" id="admin-err"></div>
+</div>
 
-          <textarea
-            class="notes-editor"
-            id="notes-editor"
-            placeholder="Add your notes here in markdown format...&#10;&#10;# Cell Division&#10;- Mitosis: produces 2 identical cells&#10;- Meiosis: produces 4 gametes"
-            oninput="onNotesInput()"
-          ></textarea>
+</div></div>
 
-          <div class="notes-actions">
-            <button class="btn btn-primary btn-sm" onclick="saveNotesManual()">💾 Save Notes</button>
-            <button class="btn btn-secondary btn-sm" onclick="downloadStudyFile()">⬇️ Download File</button>
-            <button class="btn btn-ghost btn-sm" onclick="copyJsonFallback()" title="iOS fallback">📋 Copy JSON</button>
-          </div>
-        </div>
-      </div><!-- /tab-notes -->
+<nav class="tab-bar">
+  <button class="tab-btn active" id="tb-quiz" onclick="switchTab('quiz')"><span class="tab-icon">⚡</span><span class="tab-lbl">Quiz</span></button>
+  <button class="tab-btn" id="tb-notes" onclick="switchTab('notes')"><span class="tab-icon">📝</span><span class="tab-lbl">Notes</span></button>
+  <button class="tab-btn" id="tb-settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span class="tab-lbl">Settings</span></button>
+  <button class="tab-btn" id="tb-admin" onclick="switchTab('admin')"><span class="tab-icon">🔧</span><span class="tab-lbl">Admin</span></button>
+</nav>
+</div>
 
-      <!-- ══ SETTINGS TAB CONTENT ══ -->
-      <div id="tab-settings" class="tab-screen">
-        <div class="settings-section">
-          <div class="settings-section-title">Question Scope</div>
-          <div class="card" style="margin-bottom:0">
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-label">Full Scope Mode</div>
-                <div class="toggle-desc">Include concepts missing from notes based on curriculum standards. Supplemented questions show a 🔵 badge.</div>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="settings-scope-toggle" onchange="syncScopeToggle('settings')" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">Question Mix</div>
-          <div class="card" style="margin-bottom:0">
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-label">Multi-Select Questions</div>
-                <div class="toggle-desc">Include "choose exactly N" questions with partial credit scoring</div>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="setting-multiselect" checked />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-info">
-                <div class="toggle-label">Fill-in-the-Blank</div>
-                <div class="toggle-desc">Include paired sentence completion questions</div>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="setting-fitb" checked />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">File Info</div>
-          <div class="card" id="settings-file-info" style="margin-bottom:0">
-            <div style="color:var(--muted);font-size:14px;">No study file loaded.</div>
-          </div>
-        </div>
-      </div><!-- /tab-settings -->
-
-      <!-- ══ ADMIN TAB CONTENT ══ -->
-      <div id="tab-admin" class="tab-screen">
-        <div class="admin-banner">
-          <div class="admin-banner-icon">⚙️</div>
-          <div>
-            <div class="admin-banner-title">Admin — Create Study File</div>
-            <div class="admin-banner-text">Paste the answer key and study notes. Generate a file to send to the student. She can append notes and run quizzes from the file directly.</div>
-          </div>
-        </div>
-
-        <!-- API Key for admin -->
-        <div class="card anim-1">
-          <div class="card-label">API Key</div>
-          <div class="api-row">
-            <div class="api-status" id="admin-api-status"></div>
-            <input type="password" id="admin-api-key" placeholder="sk-ant-api03-…" style="flex:1" autocomplete="off" oninput="onAdminKeyInput()" />
-            <button class="key-toggle" onclick="toggleAdminKey()" title="Show/hide">👁</button>
-          </div>
-        </div>
-
-        <div class="card anim-2">
-          <div class="card-label">Unit Name</div>
-          <input type="text" id="admin-unit" placeholder="e.g. Cell Division and Cell Differentiation" />
-        </div>
-
-        <div class="card anim-2">
-          <div class="card-label">Answer Key</div>
-          <textarea id="admin-key" placeholder="Paste the answer key here…&#10;&#10;Q1: A, C, D&#10;Q2: B&#10;Q3: diploid / body cells" style="min-height:120px;"></textarea>
-        </div>
-
-        <div class="card anim-3">
-          <div class="card-label">Study Notes (Markdown)</div>
-          <textarea id="admin-notes" placeholder="Paste study material in markdown…&#10;&#10;# Cell Division&#10;## Mitosis&#10;Produces two identical daughter cells..."></textarea>
-        </div>
-
-        <div class="card anim-3" style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="adminGenerate()" style="flex:1">
-            Generate Study File ⚡
-          </button>
-        </div>
-        <div class="error-box" id="admin-error"></div>
-
-      </div><!-- /tab-admin -->
-
-    </div><!-- /container -->
-  </div><!-- /main-content -->
-
-  <!-- ══════════════════════════════════════════════════════
-       BOTTOM TAB BAR
-  ══════════════════════════════════════════════════════ -->
-  <nav class="tab-bar">
-    <button class="tab-btn active" id="tabbar-quiz" onclick="switchTab('quiz')">
-      <span class="tab-icon">⚡</span>
-      <span class="tab-label">Quiz</span>
-    </button>
-    <button class="tab-btn" id="tabbar-notes" onclick="switchTab('notes')">
-      <span class="tab-icon">📝</span>
-      <span class="tab-label">Notes</span>
-    </button>
-    <button class="tab-btn" id="tabbar-settings" onclick="switchTab('settings')">
-      <span class="tab-icon">⚙️</span>
-      <span class="tab-label">Settings</span>
-    </button>
-    <button class="tab-btn" id="tabbar-admin" onclick="switchTab('admin')">
-      <span class="tab-icon">🔧</span>
-      <span class="tab-label">Admin</span>
-    </button>
-  </nav>
-
-</div><!-- /app-shell -->
-
-<!-- ══════════════════════════════════════════════════════
-     SCOPE CHECK MODAL
-══════════════════════════════════════════════════════ -->
-<div id="scope-modal" class="modal-overlay" style="display:none" onclick="closeScopeModalOutside(event)">
+<div id="scope-modal" class="modal-overlay" style="display:none" onclick="closeModalOutside(event)">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">📋 Scope Check</div>
-    <div class="modal-sub" id="scope-modal-sub">Comparing your notes against standard curriculum for this unit.</div>
-
-    <div id="scope-modal-body">
-      <div class="loading-screen" style="padding:40px 0">
-        <div class="spinner"></div>
-        <div class="loading-sub">Analyzing coverage…</div>
-      </div>
-    </div>
-
-    <div class="modal-actions" id="scope-modal-actions" style="display:none">
+    <div class="modal-sub" id="scope-modal-sub">Comparing your notes against standard curriculum.</div>
+    <div id="scope-modal-body"><div class="loading-screen" style="padding:40px 0"><div class="spinner"></div><div class="loading-sub">Analyzing coverage…</div></div></div>
+    <div class="modal-acts" id="scope-modal-acts" style="display:none">
       <button class="btn btn-primary" onclick="supplementAll()">Supplement All</button>
-      <button class="btn btn-secondary" onclick="closeScopeModal()">Skip</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Skip</button>
     </div>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// GLOBAL STATE
-// ═══════════════════════════════════════════════════════════════════
-let appMode = 'quiz';
-let currentTab = 'quiz';
+let appMode='quiz',currentTab='quiz';
+let studyFile=null,fileModified=false,autoSaveTimer=null;
+let scopeData=null,supplemented=[];
+let questions=[],currentQ=0,answered=false,userAnswers=[];
+let savedContent='',savedNumQ=15,savedDiff='challenging';
+let flashcards=[],fcIdx=0,fcFlipped=false,savedNumFc=15;
+let multiSel=new Set();
 
-// File / session state
-let studyFile = null;       // The loaded .json study file object
-let fileModified = false;
-let autoSaveTimer = null;
+function switchTab(t){currentTab=t;document.querySelectorAll('.tab-screen').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');document.getElementById('tb-'+t).classList.add('active');window.scrollTo(0,0);}
+function setMode(m){appMode=m;document.getElementById('mode-quiz-btn').classList.toggle('active',m==='quiz');document.getElementById('mode-fc-btn').classList.toggle('active',m==='flashcard');document.getElementById('quiz-settings').style.display=m==='quiz'?'block':'none';document.getElementById('fc-settings').style.display=m==='flashcard'?'block':'none';}
 
-// Scope check data
-let scopeData = null;       // { covered_concepts, missing_concepts, coverage_score }
-let supplementedConcepts = [];  // concepts added via scope check
+const keyEl=document.getElementById('api-key');
+const dotEl=document.getElementById('api-dot');
+let keyVis=false;
+keyEl.addEventListener('input',()=>{dotEl.className='api-dot'+(keyEl.value.trim().startsWith('sk-ant')?' on':'');});
+function toggleKey(){keyVis=!keyVis;keyEl.type=keyVis?'text':'password';}
+function onAdminKey(){const v=document.getElementById('admin-key').value.trim();document.getElementById('admin-dot').className='api-dot'+(v.startsWith('sk-ant')?' on':'');}
+function toggleAdminKey(){const el=document.getElementById('admin-key');el.type=el.type==='password'?'text':'password';}
+function getKey(){return keyEl.value.trim()||document.getElementById('admin-key').value.trim();}
 
-// Quiz state
-let questions = [];
-let currentQ = 0;
-let answered = false;
-let userAnswers = [];
-let savedContent = '';
-let savedNumQ = 10;
-let savedDifficulty = 'standard';
+function showScreen(id){document.querySelectorAll('#tab-quiz .screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 
-// Flashcard state
-let flashcards = [];
-let fcIndex = 0;
-let fcFlipped = false;
-let savedNumCards = 15;
-
-// ═══════════════════════════════════════════════════════════════════
-// TAB NAVIGATION
-// ═══════════════════════════════════════════════════════════════════
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  document.getElementById('tabbar-' + tab).classList.add('active');
-  window.scrollTo(0, 0);
+async function claude(key,prompt,maxTok=5000){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTok,messages:[{role:'user',content:prompt}]})});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.error?.message||`API error ${r.status}`);}
+  const d=await r.json();return d.content?.[0]?.text||'';
 }
+function parseJSON(raw){raw=raw.replace(/```json/gi,'').replace(/```/g,'').trim();try{return JSON.parse(raw);}catch(e){const a=raw.match(/\[[\s\S]*\]/);if(a)return JSON.parse(a[0]);const o=raw.match(/\{[\s\S]*\}/);if(o)return JSON.parse(o[0]);throw new Error('Could not parse response.');}}
 
-// ═══════════════════════════════════════════════════════════════════
-// MODE TOGGLE
-// ═══════════════════════════════════════════════════════════════════
-function setMode(mode) {
-  appMode = mode;
-  document.getElementById('mode-quiz-btn').classList.toggle('active', mode === 'quiz');
-  document.getElementById('mode-fc-btn').classList.toggle('active', mode === 'flashcard');
-  document.getElementById('quiz-settings').style.display = mode === 'quiz' ? 'block' : 'none';
-  document.getElementById('fc-settings').style.display = mode === 'flashcard' ? 'block' : 'none';
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// API KEY UX
-// ═══════════════════════════════════════════════════════════════════
-const keyInput = document.getElementById('api-key-input');
-const keyStatus = document.getElementById('api-status');
-let keyVisible = false;
-
-keyInput.addEventListener('input', () => {
-  keyStatus.className = 'api-status' + (keyInput.value.trim().startsWith('sk-ant') ? ' active' : '');
-});
-document.getElementById('key-toggle').addEventListener('click', () => {
-  keyVisible = !keyVisible;
-  keyInput.type = keyVisible ? 'text' : 'password';
-  document.getElementById('key-toggle').textContent = keyVisible ? '🙈' : '👁';
-});
-
-function onAdminKeyInput() {
-  const v = document.getElementById('admin-api-key').value.trim();
-  document.getElementById('admin-api-status').className = 'api-status' + (v.startsWith('sk-ant') ? ' active' : '');
-}
-function toggleAdminKey() {
-  const el = document.getElementById('admin-api-key');
-  el.type = el.type === 'password' ? 'text' : 'password';
-}
-
-function getApiKey() {
-  return keyInput.value.trim() || document.getElementById('admin-api-key').value.trim();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SCREEN SWITCHER (within quiz tab)
-// ═══════════════════════════════════════════════════════════════════
-function showScreen(id) {
-  document.querySelectorAll('#tab-quiz .screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0, 0);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SHARED CLAUDE API CALL
-// ═══════════════════════════════════════════════════════════════════
-async function callClaude(apiKey, prompt, maxTokens = 4000) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${res.status}`);
-  }
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
-}
-
-function parseJSON(raw) {
-  raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-  try { return JSON.parse(raw); } catch(e) {
-    const arrMatch = raw.match(/\[[\s\S]*\]/);
-    if (arrMatch) return JSON.parse(arrMatch[0]);
-    const objMatch = raw.match(/\{[\s\S]*\}/);
-    if (objMatch) return JSON.parse(objMatch[0]);
-    throw new Error('Could not parse response data.');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SCOPE TOGGLE SYNC
-// ═══════════════════════════════════════════════════════════════════
-function onScopeToggle() {
-  const val = document.getElementById('scope-toggle').checked;
-  document.getElementById('settings-scope-toggle').checked = val;
-  if (val && studyFile && !scopeData) {
-    runScopeCheck();
-  }
-  document.getElementById('scope-bar-section').style.display = val ? 'block' : 'none';
-  updateScopeBar();
-}
-
-function syncScopeToggle(from) {
-  const val = document.getElementById('settings-scope-toggle').checked;
-  document.getElementById('scope-toggle').checked = val;
-  if (val && studyFile && !scopeData) runScopeCheck();
-  document.getElementById('scope-bar-section').style.display = val ? 'block' : 'none';
-  updateScopeBar();
-}
-
-function updateScopeBar() {
-  if (!scopeData) return;
-  const pct = scopeData.coverage_score || 0;
-  document.getElementById('scope-bar-fill').style.width = pct + '%';
-  document.getElementById('scope-pct-label').textContent = pct + '% covered';
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SCOPE CHECK (runs after notes are loaded or toggle enabled)
-// ═══════════════════════════════════════════════════════════════════
-async function runScopeCheck() {
-  const apiKey = getApiKey();
-  if (!apiKey || !studyFile) return;
-
+function onScopeToggle(){const v=document.getElementById('scope-toggle').checked;document.getElementById('s-scope').checked=v;document.getElementById('scope-bar-wrap').style.display=v?'block':'none';if(v&&studyFile&&!scopeData)runScopeCheck();updateScopeBar();}
+function syncScope(){const v=document.getElementById('s-scope').checked;document.getElementById('scope-toggle').checked=v;document.getElementById('scope-bar-wrap').style.display=v?'block':'none';if(v&&studyFile&&!scopeData)runScopeCheck();updateScopeBar();}
+function updateScopeBar(){if(!scopeData)return;const p=scopeData.coverage_score||0;document.getElementById('scope-bar').style.width=p+'%';document.getElementById('scope-pct').textContent=p+'% covered';}
+async function runScopeCheck(){
+  const key=getKey();if(!key||!studyFile)return;
   showScopeModal(true);
-
-  const notes = studyFile.notes_md || '';
-  const unit = studyFile.unit || 'this subject';
-
-  const prompt = `Analyze the following study material for the unit: "${unit}".
-
-Return ONLY a JSON object with this exact structure:
-{
-  "covered_concepts": ["concept1", "concept2"],
-  "missing_concepts": [
-    {
-      "concept": "concept name",
-      "reason": "why it is commonly tested"
-    }
-  ],
-  "coverage_score": 72
+  try{const raw=await claude(key,`Analyze study material for unit: "${studyFile.unit||'this subject'}". Return ONLY JSON: {"covered_concepts":["c1"],"missing_concepts":[{"concept":"name","reason":"why tested"}],"coverage_score":72}\nJSON only.\nMATERIAL:\n${(studyFile.notes_md||'').slice(0,8000)}`,1000);scopeData=parseJSON(raw);renderScopeModal();updateScopeBar();}
+  catch(e){closeModal();}
 }
-
-coverage_score is an integer 0-100 representing how complete the notes are vs standard curriculum.
-missing_concepts should include 3-8 important testable concepts absent from the notes.
-Do not include preamble, explanation, or markdown fences. JSON only.
-
-STUDY MATERIAL:
-${notes.slice(0, 8000)}`;
-
-  try {
-    const raw = await callClaude(apiKey, prompt, 1000);
-    scopeData = parseJSON(raw);
-    renderScopeModal();
-    updateScopeBar();
-    document.getElementById('scope-bar-section').style.display = 'block';
-  } catch(e) {
-    closeScopeModal();
-    console.error('Scope check failed:', e.message);
-  }
+function showScopeModal(loading){document.getElementById('scope-modal').style.display='flex';document.getElementById('scope-modal-acts').style.display='none';if(loading)document.getElementById('scope-modal-body').innerHTML=`<div class="loading-screen" style="padding:40px 0"><div class="spinner"></div><div class="loading-sub">Analyzing notes…</div></div>`;}
+function renderScopeModal(){
+  if(!scopeData)return;
+  const cov=scopeData.covered_concepts||[],miss=scopeData.missing_concepts||[],pct=scopeData.coverage_score||0;
+  document.getElementById('scope-modal-sub').textContent=`Notes cover ${pct}% of standard curriculum (${cov.length} of ${cov.length+miss.length} concepts).`;
+  let html='';
+  if(cov.length){html+=`<div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--correct);margin-bottom:10px;margin-top:4px;">✅ Covered</div><div class="concept-list">`;cov.forEach(c=>{html+=`<div class="concept-item covered"><span class="concept-icon">✓</span><div><div class="concept-name">${esc(c)}</div></div></div>`;});html+=`</div>`;}
+  if(miss.length){html+=`<div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--warn);margin-bottom:10px;margin-top:16px;">⚠️ Missing</div><div class="concept-list">`;miss.forEach((m,i)=>{const added=supplemented.some(s=>s.concept===m.concept);html+=`<div class="concept-item missing"><span class="concept-icon">⚠</span><div style="flex:1"><div class="concept-name">${esc(m.concept)}</div><div class="concept-reason">${esc(m.reason)}</div></div><button class="concept-add ${added?'added':''}" id="cb-${i}" onclick="toggleConcept(${i})">${added?'✓ Added':'+ Add'}</button></div>`;});html+=`</div>`;}
+  document.getElementById('scope-modal-body').innerHTML=html;
+  document.getElementById('scope-modal-acts').style.display='flex';
 }
+function toggleConcept(i){const miss=scopeData.missing_concepts||[];const c=miss[i];const idx=supplemented.findIndex(s=>s.concept===c.concept);if(idx>=0){supplemented.splice(idx,1);document.getElementById(`cb-${i}`).textContent='+ Add';document.getElementById(`cb-${i}`).classList.remove('added');}else{supplemented.push(c);document.getElementById(`cb-${i}`).textContent='✓ Added';document.getElementById(`cb-${i}`).classList.add('added');}}
+function supplementAll(){supplemented=[...(scopeData?.missing_concepts||[])];document.querySelectorAll('.concept-add').forEach(b=>{b.textContent='✓ Added';b.classList.add('added');});setTimeout(closeModal,400);}
+function closeModal(){document.getElementById('scope-modal').style.display='none';}
+function closeModalOutside(e){if(e.target===document.getElementById('scope-modal'))closeModal();}
 
-function showScopeModal(loading) {
-  document.getElementById('scope-modal').style.display = 'flex';
-  document.getElementById('scope-modal-actions').style.display = 'none';
-  if (loading) {
-    document.getElementById('scope-modal-body').innerHTML = `
-      <div class="loading-screen" style="padding:40px 0">
-        <div class="spinner"></div>
-        <div class="loading-sub">Analyzing your notes against curriculum…</div>
-      </div>`;
-  }
-}
+function getContent(){if(studyFile){let c=studyFile.notes_md||'';if(supplemented.length)c+='\n\n## Supplemented Topics\n'+supplemented.map(s=>`- ${s.concept}: ${s.reason}`).join('\n');return c;}return document.getElementById('content-input').value.trim();}
 
-function renderScopeModal() {
-  if (!scopeData) return;
-  const covered = scopeData.covered_concepts || [];
-  const missing = scopeData.missing_concepts || [];
-  const pct = scopeData.coverage_score || 0;
-
-  document.getElementById('scope-modal-sub').textContent =
-    `Your notes cover ${pct}% of standard curriculum (${covered.length} of ${covered.length + missing.length} concepts).`;
-
-  let html = '';
-
-  if (covered.length) {
-    html += `<div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--correct);margin-bottom:10px;margin-top:4px;">✅ Covered in your notes</div>`;
-    html += `<div class="concept-list">`;
-    covered.forEach(c => {
-      html += `<div class="concept-item covered"><span class="concept-icon">✓</span><div class="concept-text"><div class="concept-name">${escapeHtml(c)}</div></div></div>`;
-    });
-    html += `</div>`;
-  }
-
-  if (missing.length) {
-    html += `<div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--warn);margin-bottom:10px;margin-top:16px;">⚠️ Missing from your notes</div>`;
-    html += `<div class="concept-list">`;
-    missing.forEach((m, i) => {
-      const isAdded = supplementedConcepts.some(s => s.concept === m.concept);
-      html += `
-        <div class="concept-item missing" id="concept-item-${i}">
-          <span class="concept-icon">⚠</span>
-          <div class="concept-text">
-            <div class="concept-name">${escapeHtml(m.concept)}</div>
-            <div class="concept-reason">${escapeHtml(m.reason)}</div>
-          </div>
-          <button class="concept-add-btn ${isAdded ? 'added' : ''}" id="concept-btn-${i}" onclick="toggleConcept(${i})">
-            ${isAdded ? '✓ Added' : '+ Add'}
-          </button>
-        </div>`;
-    });
-    html += `</div>`;
-  }
-
-  document.getElementById('scope-modal-body').innerHTML = html;
-  document.getElementById('scope-modal-actions').style.display = 'flex';
-}
-
-function toggleConcept(idx) {
-  const missing = scopeData.missing_concepts || [];
-  const concept = missing[idx];
-  const existing = supplementedConcepts.findIndex(s => s.concept === concept.concept);
-  if (existing >= 0) {
-    supplementedConcepts.splice(existing, 1);
-    document.getElementById(`concept-btn-${idx}`).textContent = '+ Add';
-    document.getElementById(`concept-btn-${idx}`).classList.remove('added');
-  } else {
-    supplementedConcepts.push(concept);
-    document.getElementById(`concept-btn-${idx}`).textContent = '✓ Added';
-    document.getElementById(`concept-btn-${idx}`).classList.add('added');
-  }
-}
-
-function supplementAll() {
-  supplementedConcepts = [...(scopeData?.missing_concepts || [])];
-  document.querySelectorAll('.concept-add-btn').forEach(btn => {
-    btn.textContent = '✓ Added';
-    btn.classList.add('added');
-  });
-  setTimeout(closeScopeModal, 400);
-}
-
-function closeScopeModal() {
-  document.getElementById('scope-modal').style.display = 'none';
-}
-
-function closeScopeModalOutside(e) {
-  if (e.target === document.getElementById('scope-modal')) closeScopeModal();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// QUIZ GENERATION
-// ═══════════════════════════════════════════════════════════════════
-async function generateQuiz() {
-  const apiKey = getApiKey();
-  const content = getStudyContent();
-  const numQ = parseInt(document.getElementById('num-questions').value) || 10;
-  const difficulty = document.getElementById('difficulty').value;
-  const errBox = document.getElementById('setup-error');
-  errBox.classList.remove('show');
-
-  if (!apiKey) return showError(errBox, 'Please enter your Anthropic API key.');
-  if (!apiKey.startsWith('sk-ant')) return showError(errBox, "That doesn't look like a valid Anthropic key (should start with sk-ant…).");
-  if (!content || content.length < 50) return showError(errBox, 'Please paste study content or load a study file.');
-
-  savedContent = content;
-  savedNumQ = numQ;
-  savedDifficulty = difficulty;
-
-  document.getElementById('loading-title').textContent = 'Generating your quiz…';
-  document.getElementById('loading-sub').textContent = 'Claude is reading your content and crafting questions.';
+async function generateQuiz(){
+  const key=getKey(),content=getContent();
+  const numQ=parseInt(document.getElementById('num-q').value)||15;
+  const diff=document.getElementById('difficulty').value;
+  const err=document.getElementById('setup-err');err.classList.remove('show');
+  if(!key)return showErr(err,'Please enter your Anthropic API key.');
+  if(!key.startsWith('sk-ant'))return showErr(err,'Key should start with sk-ant…');
+  if(!content||content.length<50)return showErr(err,'Please paste study content or load a study file.');
+  savedContent=content;savedNumQ=numQ;savedDiff=diff;
+  document.getElementById('load-title').textContent='Generating your quiz…';
+  document.getElementById('load-sub').textContent='Claude is reading your content and crafting questions.';
   showScreen('screen-loading');
-
-  const useMultiSelect = document.getElementById('setting-multiselect').checked;
-  const useFitb = document.getElementById('setting-fitb').checked;
-  const useFullScope = document.getElementById('scope-toggle').checked;
-
-  try {
-    const raw = await callClaude(apiKey, buildQuizPrompt(content, numQ, difficulty, useMultiSelect, useFitb, useFullScope), 5000);
-    const parsed = parseJSON(raw);
-    if (!Array.isArray(parsed) || !parsed.length) throw new Error('Received empty or invalid quiz data.');
-
-    questions = parsed.map(q => normalizeQuestion(q));
-    userAnswers = new Array(questions.length).fill(null);
-    currentQ = 0;
-    answered = false;
-
-    // Update last_compiled if file loaded
-    if (studyFile) {
-      studyFile.last_compiled = new Date().toISOString().split('T')[0];
-      studyFile.questions = questions;
-    }
-
-    showScreen('screen-quiz');
-    renderQuestion();
-  } catch(err) {
-    showScreen('screen-setup');
-    showError(document.getElementById('setup-error'), '⚠️ ' + err.message);
-  }
+  const useMS=document.getElementById('s-multi').checked;
+  const useFB=document.getElementById('s-fitb').checked;
+  try{
+    const raw=await claude(key,buildPrompt(content,numQ,diff,useMS,useFB));
+    const parsed=parseJSON(raw);
+    if(!Array.isArray(parsed)||!parsed.length)throw new Error('Empty quiz data received.');
+    questions=parsed.map(normalizeQ);userAnswers=new Array(questions.length).fill(null);currentQ=0;answered=false;
+    if(studyFile){studyFile.last_compiled=today();studyFile.questions=questions;}
+    showScreen('screen-quiz');renderQ();
+  }catch(e){showScreen('screen-setup');showErr(document.getElementById('setup-err'),'⚠️ '+e.message);}
 }
 
-function getStudyContent() {
-  if (studyFile) {
-    let content = studyFile.notes_md || '';
-    if (supplementedConcepts.length > 0) {
-      content += '\n\n## Supplemented Topics\n' + supplementedConcepts.map(s => `- ${s.concept}: ${s.reason}`).join('\n');
-    }
-    if (studyFile.answer_key) content += '\n\n## Answer Key Reference\n' + studyFile.answer_key;
-    return content;
-  }
-  return document.getElementById('content-input').value.trim();
+function buildPrompt(content,numQ,diff,useMS,useFB){
+  const dn={easy:'Straightforward, clearly distinct choices.',standard:'Mix recall and comprehension. Plausible distractors.',challenging:'Deep comprehension required. Very plausible distractors — student must truly understand.'}[diff];
+  const types=[];
+  if(useMS&&useFB){const ms=Math.floor(numQ*.35),fb=Math.floor(numQ*.2),mc=numQ-ms-fb;types.push(`${mc} single_select`,`${ms} multi_select (choose exactly 3)`,`${fb} fill_blank`);}
+  else if(useMS){const ms=Math.floor(numQ*.4);types.push(`${numQ-ms} single_select`,`${ms} multi_select`);}
+  else if(useFB){const fb=Math.floor(numQ*.25);types.push(`${numQ-fb} single_select`,`${fb} fill_blank`);}
+  else types.push(`${numQ} single_select`);
+  const sn=supplemented.length?`\nADDITIONAL CONCEPTS (tag source:"supplemented"):\n${supplemented.map(s=>`- ${s.concept}`).join('\n')}`:'';
+  return `Expert biology quiz writer. Generate exactly ${numQ} questions.
+DIFFICULTY: ${diff.toUpperCase()} — ${dn}
+MIX: ${types.join(', ')}
+SOURCE: from_notes or supplemented${sn}
+DISTRACTOR RULES: Wrong = common misconceptions, same structure as correct, never all/none of above. multi_select: 5-6 options total, exactly 3 correct.
+OUTPUT: ONLY valid JSON array. No markdown.
+single_select: {"type":"single_select","source":"from_notes","question":"...","correct":"...","distractors":["...","...","..."],"distractor_reasoning":"..."}
+multi_select: {"type":"multi_select","source":"from_notes","question":"Which THREE...","correct_count":3,"options":["A","B","C","D","E","F"],"correct_answers":["A","C","D"],"distractor_reasoning":"..."}
+fill_blank: {"type":"fill_blank","source":"from_notes","question":"The ___ shows the ___ number...","blanks":[{"id":0,"answer":"karyotype"},{"id":1,"answer":"diploid"}]}
+CONTENT:\n${content.slice(0,12000)}`;
 }
 
-function normalizeQuestion(q) {
-  if (q.type === 'multi_select') {
-    return {
-      type: 'multi_select',
-      question: q.question,
-      source: q.source || 'from_notes',
-      correct_count: q.correct_count || 3,
-      options: q.options || [],
-      correct_answers: q.correct_answers || [],
-      distractor_reasoning: q.distractor_reasoning || ''
-    };
-  }
-  if (q.type === 'fill_blank') {
-    return {
-      type: 'fill_blank',
-      question: q.question,
-      source: q.source || 'from_notes',
-      blanks: q.blanks || []
-    };
-  }
-  // single_select (legacy format support)
-  const choices = [q.correct, ...(q.distractors || [])].sort(() => Math.random() - 0.5);
-  return {
-    type: 'single_select',
-    question: q.question,
-    source: q.source || 'from_notes',
-    correct: q.correct,
-    choices,
-    distractor_reasoning: q.distractor_reasoning || ''
-  };
+function normalizeQ(q){if(q.type==='multi_select'||q.type==='fill_blank')return{...q};const choices=[q.correct,...(q.distractors||[])].sort(()=>Math.random()-.5);return{type:'single_select',question:q.question,source:q.source||'from_notes',correct:q.correct,choices,distractor_reasoning:q.distractor_reasoning||''};}
+
+async function tryAgain(){
+  const key=getKey();if(!key){alert('Please re-enter your API key.');resetToSetup();return;}
+  document.getElementById('load-title').textContent='Generating new questions…';document.getElementById('load-sub').textContent='Same topic, fresh questions.';showScreen('screen-loading');
+  const useMS=document.getElementById('s-multi').checked,useFB=document.getElementById('s-fitb').checked;
+  try{const raw=await claude(key,buildPrompt(savedContent,savedNumQ,savedDiff,useMS,useFB));const parsed=parseJSON(raw);questions=parsed.map(normalizeQ);userAnswers=new Array(questions.length).fill(null);currentQ=0;answered=false;showScreen('screen-quiz');renderQ();}
+  catch(e){showScreen('screen-results');alert('Error: '+e.message);}
 }
 
-function buildQuizPrompt(content, numQ, difficulty, useMultiSelect, useFitb, useFullScope) {
-  const diffNote = {
-    easy: 'Straightforward questions with clearly distinct answer choices.',
-    standard: 'Mix of recall and comprehension. Distractors plausible but clearly wrong to someone who studied.',
-    challenging: 'Deeper comprehension and application. Distractors very plausible — student must truly understand to distinguish.'
-  }[difficulty];
-
-  const typeInstructions = [];
-  let mcqCount = numQ;
-
-  if (useMultiSelect && useFitb) {
-    const ms = Math.floor(numQ * 0.35);
-    const fb = Math.floor(numQ * 0.2);
-    const mc = numQ - ms - fb;
-    typeInstructions.push(`- ${mc} single-answer MCQ (type: "single_select")`);
-    typeInstructions.push(`- ${ms} multi-select questions where exactly 3 answers are correct (type: "multi_select")`);
-    typeInstructions.push(`- ${fb} fill-in-the-blank paired sentence completion (type: "fill_blank")`);
-  } else if (useMultiSelect) {
-    const ms = Math.floor(numQ * 0.4);
-    typeInstructions.push(`- ${numQ - ms} single-answer MCQ (type: "single_select")`);
-    typeInstructions.push(`- ${ms} multi-select questions (type: "multi_select")`);
-  } else if (useFitb) {
-    const fb = Math.floor(numQ * 0.25);
-    typeInstructions.push(`- ${numQ - fb} single-answer MCQ (type: "single_select")`);
-    typeInstructions.push(`- ${fb} fill-in-the-blank (type: "fill_blank")`);
-  } else {
-    typeInstructions.push(`- ${numQ} single-answer MCQ (type: "single_select")`);
-  }
-
-  const supplementNote = useFullScope && supplementedConcepts.length > 0
-    ? `\nADDITIONAL CONCEPTS TO INCLUDE (tag these as source: "supplemented"):\n${supplementedConcepts.map(s => `- ${s.concept}`).join('\n')}`
-    : '';
-
-  return `You are an expert quiz writer for a biology student. Generate exactly ${numQ} questions total.
-
-DIFFICULTY: ${difficulty.toUpperCase()} — ${diffNote}
-
-QUESTION MIX:
-${typeInstructions.join('\n')}
-
-SOURCE TAGGING:
-- Questions based on provided notes: use source: "from_notes"
-- Questions from supplemented concepts: use source: "supplemented"
-${supplementNote}
-
-DISTRACTOR RULES:
-- Wrong answers must represent common student misconceptions
-- Distractors must be the same type/length/structure as correct answers
-- Never use "All of the above" or "None of the above"
-- For multi_select: include exactly 2 plausible but wrong options beyond the 3 correct ones (5-6 total options)
-- Include a brief distractor_reasoning explaining the most common wrong answer
-
-OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown fences, no explanation.
-
-For single_select:
-{ "type": "single_select", "source": "from_notes", "question": "...", "correct": "...", "distractors": ["...","...","..."], "distractor_reasoning": "..." }
-
-For multi_select:
-{ "type": "multi_select", "source": "from_notes", "question": "Which THREE of the following...", "correct_count": 3, "options": ["A","B","C","D","E","F"], "correct_answers": ["A","C","D"], "distractor_reasoning": "..." }
-
-For fill_blank:
-{ "type": "fill_blank", "source": "from_notes", "question": "The ___ shows the ___ number of chromosomes...", "blanks": [{"id":1,"answer":"karyotype"},{"id":2,"answer":"diploid"}] }
-
-STUDY CONTENT:
-${content.slice(0, 12000)}`;
+function renderQ(){
+  const q=questions[currentQ],total=questions.length;
+  document.getElementById('prog-text').textContent=`Question ${currentQ+1} of ${total}`;
+  document.getElementById('prog-fill').style.width=`${(currentQ/total)*100}%`;
+  const badge=q.source==='supplemented'?`<div class="src-badge supp">🔵 Supplemented</div>`:'';
+  let inner=q.type==='multi_select'?renderMS(q):q.type==='fill_blank'?renderFB(q):renderSS(q);
+  document.getElementById('q-area').innerHTML=`<div class="card q-card">${badge}<div class="q-num">Question ${currentQ+1} / ${total}</div>${inner}<div id="fb-area"></div></div><div class="next-row" id="next-row" style="display:none"><button class="btn btn-primary" onclick="nextQ()">${currentQ+1===total?'See Results 🎯':'Next →'}</button></div>`;
+  answered=false;multiSel.clear();
 }
 
-async function tryAgain() {
-  const apiKey = getApiKey();
-  if (!apiKey) { alert('Please re-enter your API key.'); resetToSetup(); return; }
-  document.getElementById('loading-title').textContent = 'Generating new questions…';
-  document.getElementById('loading-sub').textContent = 'Same topic, fresh set of questions.';
-  showScreen('screen-loading');
-  const useMultiSelect = document.getElementById('setting-multiselect').checked;
-  const useFitb = document.getElementById('setting-fitb').checked;
-  const useFullScope = document.getElementById('scope-toggle').checked;
-  try {
-    const raw = await callClaude(apiKey, buildQuizPrompt(savedContent, savedNumQ, savedDifficulty, useMultiSelect, useFitb, useFullScope), 5000);
-    const parsed = parseJSON(raw);
-    if (!Array.isArray(parsed) || !parsed.length) throw new Error('Received empty or invalid quiz data.');
-    questions = parsed.map(q => normalizeQuestion(q));
-    userAnswers = new Array(questions.length).fill(null);
-    currentQ = 0; answered = false;
-    showScreen('screen-quiz');
-    renderQuestion();
-  } catch(err) {
-    showScreen('screen-results');
-    alert('Error generating new questions: ' + err.message);
-  }
+function renderSS(q){const L=['A','B','C','D','E'];return `<div class="q-text">${esc(q.question)}</div><div class="choices" id="choices">${q.choices.map((c,i)=>`<button class="choice" id="ch-${i}" onclick="selectSS(${i})"><div class="c-letter">${L[i]}</div><div>${esc(c)}</div></button>`).join('')}</div>`;}
+function renderMS(q){const L=['A','B','C','D','E','F'];return `<div class="q-text">${esc(q.question)}</div><div class="q-instr">⚡ Select exactly ${q.correct_count} answers, then tap Submit</div><div class="choices" id="choices">${q.options.map((c,i)=>`<button class="choice" id="ch-${i}" onclick="toggleMS(${i})"><div class="c-letter">${L[i]}</div><div>${esc(c)}</div></button>`).join('')}</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" id="ms-sub" onclick="submitMS()" disabled>Submit (<span id="ms-cnt">0</span>/${q.correct_count})</button></div>`;}
+function renderFB(q){let s=esc(q.question);let bi=0;s=s.replace(/_{2,}/g,()=>{const id=`bl-${bi}`;bi++;return `<span class="fitb-blank" id="${id}-w"><input type="text" id="${id}" placeholder="…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width:90px"/></span>`;});return `<div class="fitb-sent">${s}</div><button class="btn btn-primary btn-sm" onclick="submitFB()">Check Answers</button>`;}
+
+function selectSS(i){if(answered)return;answered=true;const q=questions[currentQ];const chosen=q.choices[i],ok=chosen===q.correct,ci=q.choices.indexOf(q.correct);userAnswers[currentQ]={type:'single_select',chosen,isCorrect:ok,score:ok?1:0,total:1};q.choices.forEach((_,j)=>document.getElementById(`ch-${j}`).disabled=true);document.getElementById(`ch-${i}`).classList.add(ok?'correct':'wrong');const ic=document.createElement('span');ic.className='c-icon';ic.textContent=ok?'✓':'✗';document.getElementById(`ch-${i}`).appendChild(ic);if(!ok){document.getElementById(`ch-${ci}`).classList.add('rev-correct');const ic2=document.createElement('span');ic2.className='c-icon';ic2.textContent='✓';document.getElementById(`ch-${ci}`).appendChild(ic2);}const dn=q.distractor_reasoning&&!ok?`<div class="dist-note">💡 ${esc(q.distractor_reasoning)}</div>`:'';document.getElementById('fb-area').innerHTML=`<div class="feedback ${ok?'fb-correct':'fb-wrong'}"><div class="fb-head">${ok?'✅ Correct!':'❌ Not quite'}</div><div class="fb-detail">${ok?'Great job.':`Correct: <strong>${esc(q.correct)}</strong>`}${dn}</div></div>`;document.getElementById('next-row').style.display='flex';}
+
+function toggleMS(i){if(answered)return;const btn=document.getElementById(`ch-${i}`);if(multiSel.has(i)){multiSel.delete(i);btn.classList.remove('ms-sel');}else{multiSel.add(i);btn.classList.add('ms-sel');}document.getElementById('ms-cnt').textContent=multiSel.size;document.getElementById('ms-sub').disabled=multiSel.size===0;}
+
+function submitMS(){if(answered)return;answered=true;const q=questions[currentQ];const sel=[...multiSel].map(i=>q.options[i]);const correct=q.correct_answers;const okSel=sel.filter(s=>correct.includes(s));const wrongSel=sel.filter(s=>!correct.includes(s));const missed=correct.filter(c=>!sel.includes(c));const score=okSel.length,total=correct.length,full=score===total&&wrongSel.length===0;userAnswers[currentQ]={type:'multi_select',selected:sel,correctlySelected:okSel,wrongSelected:wrongSel,missed,score,total,isCorrect:full};q.options.forEach((_,i)=>{document.getElementById(`ch-${i}`).disabled=true;const opt=q.options[i];const isC=correct.includes(opt),wasSel=multiSel.has(i);const btn=document.getElementById(`ch-${i}`);btn.classList.remove('ms-sel');if(wasSel&&isC)btn.classList.add('correct');else if(wasSel&&!isC)btn.classList.add('wrong');else if(!wasSel&&isC)btn.classList.add('rev-correct');});const cls=full?'fb-correct':score>0?'fb-partial':'fb-wrong';let det=`<div class="part-pill">${score} of ${total} correct</div>`;if(missed.length)det+=`<div class="missed">❌ Missed: ${missed.map(esc).join(', ')}</div>`;if(wrongSel.length&&q.distractor_reasoning)det+=`<div class="dist-note">💡 ${esc(q.distractor_reasoning)}</div>`;document.getElementById('fb-area').innerHTML=`<div class="feedback ${cls}"><div class="fb-head">${full?'✅ Perfect!':score>0?'⚡ Partial Credit':'❌ Missed'}</div><div class="fb-detail">${det}</div></div>`;multiSel.clear();document.getElementById('next-row').style.display='flex';}
+
+function submitFB(){if(answered)return;answered=true;const q=questions[currentQ];let score=0;const results=[];q.blanks.forEach((b,i)=>{const inp=document.getElementById(`bl-${i}`);const wrap=document.getElementById(`bl-${i}-w`);if(!inp)return;const uv=(inp.value||'').trim().toLowerCase();const cv=b.answer.toLowerCase();const ok=uv===cv||uv.includes(cv)||cv.includes(uv);if(ok)score++;if(wrap)wrap.classList.add(ok?'ok':'bad');inp.disabled=true;results.push({userVal:inp.value,correct:b.answer,isCorrect:ok});});const total=q.blanks.length,full=score===total;userAnswers[currentQ]={type:'fill_blank',results,score,total,isCorrect:full};let det=`<div class="part-pill">${score} of ${total} blanks correct</div>`;results.forEach(r=>{if(!r.isCorrect)det+=`<div class="missed">❌ "${esc(r.userVal||'(blank)')}" → <strong>${esc(r.correct)}</strong></div>`;});document.getElementById('fb-area').innerHTML=`<div class="feedback ${full?'fb-correct':score>0?'fb-partial':'fb-wrong'}"><div class="fb-head">${full?'✅ Correct!':'❌ Check blanks'}</div><div class="fb-detail">${det}</div></div>`;document.getElementById('next-row').style.display='flex';}
+
+function nextQ(){currentQ++;multiSel.clear();if(currentQ>=questions.length)showResults();else renderQ();}
+
+function showResults(){
+  let ts=0,tp=0;userAnswers.forEach(a=>{if(!a)return;ts+=a.score||(a.isCorrect?1:0);tp+=a.total||1;});
+  const pct=Math.round((ts/tp)*100);let emoji='😓',title='Keep Studying!';
+  if(pct>=90){emoji='🏆';title='Outstanding!';}else if(pct>=75){emoji='🎉';title='Great Work!';}else if(pct>=60){emoji='👍';title='Getting There!';}else if(pct>=40){emoji='📚';title='Keep Practicing!';}
+  document.getElementById('res-emoji').textContent=emoji;document.getElementById('res-title').textContent=title;document.getElementById('res-sub').textContent=`You scored ${ts} of ${tp} points.`;document.getElementById('score-txt').textContent=`${ts} / ${tp} — ${pct}%`;document.getElementById('score-dot').style.background=pct>=75?'var(--correct)':pct>=50?'var(--warn)':'var(--wrong)';
+  const missed=userAnswers.filter(a=>a&&!a.isCorrect).length;document.getElementById('sg-section').style.display=missed>0?'block':'none';
+  const sp=document.getElementById('sg-panel');sp.style.display='none';sp.classList.remove('open');document.getElementById('sg-out').innerHTML='';
+  const sb=document.getElementById('sg-btn');sb.disabled=false;sb.classList.remove('loading');sb.innerHTML='📖 Generate Study Guide';
+  document.getElementById('review-list').innerHTML=questions.map((q,i)=>{const a=userAnswers[i];if(!a)return'';const ok=a.isCorrect,part=!ok&&a.score>0;const cls=ok?'ri-correct':part?'ri-partial':'ri-wrong';const icon=ok?'✅':part?'⚡':'❌';let ah='';if(q.type==='multi_select'){ah=`<div class="ri-pscore">${a.score}/${a.total} correct</div>`;a.correctlySelected?.forEach(x=>ah+=`<div class="ri-ok">✓ ${esc(x)}</div>`);a.missed?.forEach(x=>ah+=`<div class="ri-bad">❌ Missed: ${esc(x)}</div>`);}else if(q.type==='fill_blank'){ah=`<div class="ri-pscore">${a.score}/${a.total} blanks</div>`;a.results?.forEach(r=>ah+=r.isCorrect?`<div class="ri-ok">✓ ${esc(r.correct)}</div>`:`<div class="ri-bad">✗ "${esc(r.userVal)}" → ${esc(r.correct)}</div>`);}else{ah+=`<div class="ri-ok">✓ ${esc(q.correct)}</div>`;if(!ok&&a.chosen)ah+=`<div class="ri-bad">✗ You: ${esc(a.chosen)}</div>`;}return`<div class="review-item ${cls}" style="animation-delay:${i*.04}s"><div class="ri-q"><span class="ri-icon">${icon}</span><span>${esc(q.question)}</span></div><div class="ri-ans">${ah}</div></div>`;}).join('');
+  document.getElementById('prog-fill').style.width='100%';showScreen('screen-results');
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// QUIZ RENDERING
-// ═══════════════════════════════════════════════════════════════════
-function renderQuestion() {
-  const q = questions[currentQ];
-  const total = questions.length;
-  document.getElementById('progress-text').textContent = `Question ${currentQ + 1} of ${total}`;
-  document.getElementById('progress-fill').style.width = `${(currentQ / total) * 100}%`;
-
-  const sourceBadge = q.source === 'supplemented'
-    ? `<div class="source-badge supplemented">🔵 Supplemented</div>`
-    : '';
-
-  let questionHTML = '';
-
-  if (q.type === 'multi_select') {
-    questionHTML = renderMultiSelectQuestion(q, sourceBadge);
-  } else if (q.type === 'fill_blank') {
-    questionHTML = renderFillBlankQuestion(q, sourceBadge);
-  } else {
-    questionHTML = renderSingleSelectQuestion(q, sourceBadge);
-  }
-
-  document.getElementById('question-area').innerHTML = `
-    <div class="card question-card">
-      <div class="question-number">Question ${currentQ + 1} / ${total}</div>
-      ${sourceBadge}
-      ${questionHTML}
-      <div id="feedback-area"></div>
-    </div>
-    <div class="next-row" id="next-row" style="display:none">
-      <button class="btn btn-primary" onclick="nextQuestion()">
-        ${currentQ + 1 === total ? 'See Results 🎯' : 'Next Question →'}
-      </button>
-    </div>
-  `;
-  answered = false;
+async function generateStudyGuide(){
+  const key=getKey();if(!key){alert('API key not found.');return;}
+  const missed=questions.map((q,i)=>({q,a:userAnswers[i]})).filter(({a})=>a&&!a.isCorrect);if(!missed.length)return;
+  const btn=document.getElementById('sg-btn');btn.disabled=true;btn.classList.add('loading');btn.innerHTML='<span class="btn-spin"></span> Generating…';
+  const ms=missed.map(({q,a})=>{if(q.type==='multi_select')return`Q: ${q.question}\nCorrect: ${q.correct_answers?.join(', ')}\nMissed: ${a.missed?.join(', ')}`;if(q.type==='fill_blank')return`Q: ${q.question}\nBlanks: ${q.blanks?.map(b=>b.answer).join(', ')}`;return`Q: ${q.question}\nCorrect: ${q.correct}\nStudent: ${a.chosen}`;}).join('\n\n');
+  const panel=document.getElementById('sg-panel'),out=document.getElementById('sg-out');
+  panel.style.display='block';panel.classList.add('open');
+  out.innerHTML=`<div class="sg-skel"><div class="skel t"></div><div class="skel f"></div><div class="skel f"></div><div class="skel m"></div><div class="skel s" style="margin-top:8px"></div><div class="skel t" style="margin-top:16px"></div><div class="skel f"></div><div class="skel f"></div><div class="skel m"></div></div>`;
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+  try{
+    const raw=await claude(key,`Patient biology tutor. Student got these wrong. For each: explain concept clearly, why correct answer is right, why wrong answer is a misconception, give memory tip or analogy. Format with ### [Topic] headers, 2-3 paragraphs each. Markdown only.\n\nMISSED:\n${ms}`,2000);
+    const html=raw.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/^- (.+)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>').split('\n\n').map(p=>p.trim()).filter(Boolean).map(p=>p.startsWith('<h3>')||p.startsWith('<ul>')?p:`<p>${p}</p>`).join('\n');
+    out.innerHTML=`<div class="sg-content">${html}</div><div class="sg-divider"></div><div class="sg-acts"><button class="btn btn-secondary btn-sm" onclick="dlGuide()">💾 Save Guide</button></div>`;
+    document.getElementById('sg-sub').textContent=`${missed.length} topic${missed.length>1?'s':''} covered · Click to collapse`;
+    btn.textContent='✅ Study Guide Ready';btn.classList.remove('loading');
+  }catch(e){btn.disabled=false;btn.classList.remove('loading');btn.textContent='📖 Generate Study Guide';out.innerHTML=`<div style="color:#ff8fa8;font-size:14px;">⚠️ ${e.message}</div>`;}
 }
+function toggleSg(){document.getElementById('sg-panel').classList.toggle('open');}
+function dlGuide(){const el=document.querySelector('.sg-content');if(!el)return;dlText('studypulse-guide.txt',el.innerText);}
 
-function renderSingleSelectQuestion(q, sourceBadge) {
-  const letters = ['A','B','C','D','E'];
-  return `
-    <div class="question-text">${escapeHtml(q.question)}</div>
-    <div class="choices" id="choices">
-      ${q.choices.map((c, i) => `
-        <button class="choice" id="choice-${i}" onclick="selectSingleAnswer(${i})">
-          <div class="choice-letter">${letters[i]}</div>
-          <div>${escapeHtml(c)}</div>
-        </button>
-      `).join('')}
-    </div>
-  `;
+async function generateFlashcards(){
+  const key=getKey(),content=getContent();const n=parseInt(document.getElementById('num-fc').value)||15;const err=document.getElementById('fc-err');err.classList.remove('show');
+  if(!key)return showErr(err,'Please enter your API key.');if(!key.startsWith('sk-ant'))return showErr(err,'Key should start with sk-ant…');if(!content||content.length<50)return showErr(err,'Please paste content or load a study file.');
+  savedContent=content;savedNumFc=n;document.getElementById('load-title').textContent='Generating flashcards…';document.getElementById('load-sub').textContent='Extracting key terms and definitions.';showScreen('screen-loading');
+  try{const raw=await claude(key,`Extract exactly ${n} term-definition pairs. Term: 1-5 words. Definition: 1-3 sentences plain language. OUTPUT: ONLY JSON array. [{"term":"...","definition":"..."}]\nCONTENT:\n${content.slice(0,12000)}`,3000);const parsed=parseJSON(raw);if(!Array.isArray(parsed)||!parsed.length)throw new Error('Empty data.');flashcards=parsed;fcIdx=0;fcFlipped=false;showScreen('screen-fc');renderFc();}
+  catch(e){showScreen('screen-setup');showErr(document.getElementById('fc-err'),'⚠️ '+e.message);}
 }
-
-function renderMultiSelectQuestion(q, sourceBadge) {
-  const letters = ['A','B','C','D','E','F'];
-  return `
-    <div class="question-text">${escapeHtml(q.question)}</div>
-    <div class="question-instruction">Select exactly ${q.correct_count} answers, then tap Submit.</div>
-    <div class="choices" id="choices">
-      ${q.options.map((c, i) => `
-        <button class="choice" id="choice-${i}" onclick="toggleMultiChoice(${i})">
-          <div class="choice-letter">${letters[i]}</div>
-          <div>${escapeHtml(c)}</div>
-        </button>
-      `).join('')}
-    </div>
-    <div style="margin-top:14px;">
-      <button class="btn btn-primary btn-sm" id="multi-submit-btn" onclick="submitMultiSelect()" disabled>
-        Submit (<span id="multi-selected-count">0</span> / ${q.correct_count} selected)
-      </button>
-    </div>
-  `;
-}
-
-function renderFillBlankQuestion(q, sourceBadge) {
-  let sentence = escapeHtml(q.question);
-  // Replace ___ markers with input fields
-  let blankIdx = 0;
-  sentence = sentence.replace(/_{2,}/g, () => {
-    const id = `blank-${blankIdx}`;
-    blankIdx++;
-    return `</span><span class="fitb-blank" id="${id}-wrap"><input type="text" id="${id}" class="fitb-blank-input" placeholder="…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="onFitbInput()" /></span><span class="fitb-rest">`;
-  });
-
-  return `
-    <div class="fitb-sentence"><span class="fitb-rest">${sentence}</span></div>
-    <div style="margin-top:14px;">
-      <button class="btn btn-primary btn-sm" id="fitb-submit-btn" onclick="submitFillBlank()">
-        Check Answers
-      </button>
-    </div>
-  `;
-}
-
-// Single select answer
-function selectSingleAnswer(idx) {
-  if (answered) return;
-  answered = true;
-  const q = questions[currentQ];
-  const chosen = q.choices[idx];
-  const isCorrect = chosen === q.correct;
-  const correctIdx = q.choices.indexOf(q.correct);
-  userAnswers[currentQ] = { type: 'single_select', chosen, isCorrect, score: isCorrect ? 1 : 0, total: 1 };
-
-  q.choices.forEach((_, i) => document.getElementById(`choice-${i}`).disabled = true);
-  document.getElementById(`choice-${idx}`).classList.add(isCorrect ? 'correct' : 'wrong');
-  const icon = document.createElement('span');
-  icon.className = 'choice-icon';
-  icon.textContent = isCorrect ? '✓' : '✗';
-  document.getElementById(`choice-${idx}`).appendChild(icon);
-
-  if (!isCorrect) {
-    document.getElementById(`choice-${correctIdx}`).classList.add('reveal-correct');
-    const cIcon = document.createElement('span');
-    cIcon.className = 'choice-icon'; cIcon.textContent = '✓';
-    document.getElementById(`choice-${correctIdx}`).appendChild(cIcon);
-  }
-
-  const distNote = q.distractor_reasoning && !isCorrect
-    ? `<div class="distractor-note">💡 ${escapeHtml(q.distractor_reasoning)}</div>` : '';
-
-  document.getElementById('feedback-area').innerHTML = `
-    <div class="feedback ${isCorrect ? 'correct-fb' : 'wrong-fb'}">
-      <div class="feedback-header">${isCorrect ? '✅ Correct!' : '❌ Not quite'}</div>
-      <div class="feedback-detail">
-        ${isCorrect ? 'Great job.' : `The correct answer is: <strong>${escapeHtml(q.correct)}</strong>`}
-        ${distNote}
-      </div>
-    </div>
-  `;
-  document.getElementById('next-row').style.display = 'flex';
-}
-
-// Multi-select
-let multiSelectedSet = new Set();
-
-function toggleMultiChoice(idx) {
-  if (answered) return;
-  const q = questions[currentQ];
-  const btn = document.getElementById(`choice-${idx}`);
-
-  if (multiSelectedSet.has(idx)) {
-    multiSelectedSet.delete(idx);
-    btn.classList.remove('multi-selected');
-  } else {
-    multiSelectedSet.add(idx);
-    btn.classList.add('multi-selected');
-  }
-
-  const count = multiSelectedSet.size;
-  document.getElementById('multi-selected-count').textContent = count;
-  document.getElementById('multi-submit-btn').disabled = count === 0;
-}
-
-function submitMultiSelect() {
-  if (answered) return;
-  answered = true;
-  const q = questions[currentQ];
-  const selected = [...multiSelectedSet].map(i => q.options[i]);
-  const correct = q.correct_answers;
-  const correctlySelected = selected.filter(s => correct.includes(s));
-  const wrongSelected = selected.filter(s => !correct.includes(s));
-  const missed = correct.filter(c => !selected.includes(c));
-  const score = correctlySelected.length;
-  const total = correct.length;
-  const isFullCredit = score === total && wrongSelected.length === 0;
-  const isPartial = score > 0 && !isFullCredit;
-
-  userAnswers[currentQ] = {
-    type: 'multi_select',
-    selected,
-    correctlySelected,
-    wrongSelected,
-    missed,
-    score,
-    total,
-    isCorrect: isFullCredit
-  };
-
-  // Disable all
-  q.options.forEach((_, i) => document.getElementById(`choice-${i}`).disabled = true);
-
-  // Reveal states
-  q.options.forEach((opt, i) => {
-    const btn = document.getElementById(`choice-${i}`);
-    const isCorrect = correct.includes(opt);
-    const wasSelected = multiSelectedSet.has(i);
-
-    if (wasSelected && isCorrect) btn.classList.add('correct');
-    else if (wasSelected && !isCorrect) btn.classList.add('wrong');
-    else if (!wasSelected && isCorrect) btn.classList.add('reveal-correct');
-    btn.classList.remove('multi-selected');
-  });
-
-  let feedbackClass = isFullCredit ? 'correct-fb' : isPartial ? 'partial-fb' : 'wrong-fb';
-  let feedbackHeader = isFullCredit ? '✅ Perfect!' : isPartial ? `⚡ Partial Credit` : '❌ Missed';
-
-  let detailHtml = `<div class="partial-score">${score} of ${total} correct</div>`;
-  if (missed.length) {
-    detailHtml += `<div class="missed">❌ Missed: ${missed.map(escapeHtml).join(', ')}</div>`;
-  }
-  if (wrongSelected.length && q.distractor_reasoning) {
-    detailHtml += `<div class="distractor-note">💡 ${escapeHtml(q.distractor_reasoning)}</div>`;
-  }
-
-  document.getElementById('feedback-area').innerHTML = `
-    <div class="feedback ${feedbackClass}">
-      <div class="feedback-header">${feedbackHeader}</div>
-      <div class="feedback-detail">${detailHtml}</div>
-    </div>
-  `;
-  multiSelectedSet.clear();
-  document.getElementById('next-row').style.display = 'flex';
-}
-
-// Fill in the blank
-function onFitbInput() {
-  // Could add live validation hints here
-}
-
-function submitFillBlank() {
-  if (answered) return;
-  answered = true;
-  const q = questions[currentQ];
-  let score = 0;
-  const results = [];
-
-  q.blanks.forEach((blank, i) => {
-    const inputEl = document.getElementById(`blank-${i}`);
-    const wrapEl = document.getElementById(`blank-${i}-wrap`);
-    if (!inputEl) return;
-
-    const userVal = (inputEl.value || '').trim().toLowerCase();
-    const correctVal = blank.answer.toLowerCase();
-    const isCorrect = userVal === correctVal || userVal.includes(correctVal) || correctVal.includes(userVal);
-
-    if (isCorrect) score++;
-    if (wrapEl) wrapEl.classList.add(isCorrect ? 'correct-blank' : 'wrong-blank');
-    inputEl.value = isCorrect ? blank.answer : inputEl.value;
-    inputEl.disabled = true;
-
-    results.push({ userVal: inputEl.value, correct: blank.answer, isCorrect });
-  });
-
-  const total = q.blanks.length;
-  const isFullCredit = score === total;
-  userAnswers[currentQ] = { type: 'fill_blank', results, score, total, isCorrect: isFullCredit };
-
-  let feedbackClass = isFullCredit ? 'correct-fb' : score > 0 ? 'partial-fb' : 'wrong-fb';
-  let detailHtml = `<div class="partial-score">${score} of ${total} blanks correct</div>`;
-  results.forEach(r => {
-    if (!r.isCorrect) {
-      detailHtml += `<div class="missed">❌ You wrote "${escapeHtml(r.userVal || '(blank)')}" — correct: <strong>${escapeHtml(r.correct)}</strong></div>`;
-    }
-  });
-
-  document.getElementById('feedback-area').innerHTML = `
-    <div class="feedback ${feedbackClass}">
-      <div class="feedback-header">${isFullCredit ? '✅ Correct!' : '❌ Check the blanks'}</div>
-      <div class="feedback-detail">${detailHtml}</div>
-    </div>
-  `;
-  document.getElementById('next-row').style.display = 'flex';
-}
-
-function nextQuestion() {
-  currentQ++;
-  multiSelectedSet.clear();
-  if (currentQ >= questions.length) showResults();
-  else renderQuestion();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// RESULTS
-// ═══════════════════════════════════════════════════════════════════
-function showResults() {
-  const total = questions.length;
-  let totalScore = 0;
-  let totalPoints = 0;
-
-  userAnswers.forEach(a => {
-    if (!a) return;
-    totalScore += a.score || (a.isCorrect ? 1 : 0);
-    totalPoints += a.total || 1;
-  });
-
-  const pct = Math.round((totalScore / totalPoints) * 100);
-  let emoji = '😓', title = 'Keep Studying!';
-  if (pct >= 90) { emoji = '🏆'; title = 'Outstanding!'; }
-  else if (pct >= 75) { emoji = '🎉'; title = 'Great Work!'; }
-  else if (pct >= 60) { emoji = '👍'; title = 'Getting There!'; }
-  else if (pct >= 40) { emoji = '📚'; title = 'Keep Practicing!'; }
-
-  document.getElementById('results-emoji').textContent = emoji;
-  document.getElementById('results-title').textContent = title;
-  document.getElementById('results-sub').textContent = `You scored ${totalScore} of ${totalPoints} points.`;
-  document.getElementById('score-text').textContent = `${totalScore} / ${totalPoints} — ${pct}%`;
-  document.getElementById('score-dot').style.background = pct >= 75 ? 'var(--correct)' : pct >= 50 ? '#ffb347' : 'var(--wrong)';
-
-  const missedCount = userAnswers.filter(a => a && !a.isCorrect).length;
-  document.getElementById('study-guide-section').style.display = missedCount > 0 ? 'block' : 'none';
-  const sgPanel = document.getElementById('sg-panel');
-  sgPanel.style.display = 'none';
-  sgPanel.classList.remove('open');
-  document.getElementById('study-guide-output').innerHTML = '';
-  const btn = document.getElementById('study-guide-btn');
-  btn.disabled = false;
-  btn.classList.remove('loading');
-  btn.innerHTML = '📖 Generate Study Guide for Missed Topics';
-
-  document.getElementById('review-list').innerHTML = questions.map((q, i) => {
-    const ans = userAnswers[i];
-    if (!ans) return '';
-    const ok = ans.isCorrect;
-    const partial = !ok && ans.score > 0;
-    const cls = ok ? 'r-correct' : partial ? 'r-partial' : 'r-wrong';
-    const icon = ok ? '✅' : partial ? '⚡' : '❌';
-
-    let ansHtml = '';
-    if (q.type === 'multi_select') {
-      const scoreStr = `${ans.score}/${ans.total} correct`;
-      ansHtml = `<div class="review-partial-score">${scoreStr}</div>`;
-      if (ans.correctlySelected?.length) ansHtml += ans.correctlySelected.map(a => `<div class="review-correct-ans">✓ ${escapeHtml(a)}</div>`).join('');
-      if (ans.missed?.length) ansHtml += ans.missed.map(a => `<div class="review-wrong-ans">❌ Missed: ${escapeHtml(a)}</div>`).join('');
-    } else if (q.type === 'fill_blank') {
-      const scoreStr = `${ans.score}/${ans.total} blanks`;
-      ansHtml = `<div class="review-partial-score">${scoreStr}</div>`;
-      ans.results?.forEach(r => {
-        if (r.isCorrect) ansHtml += `<div class="review-correct-ans">✓ ${escapeHtml(r.correct)}</div>`;
-        else ansHtml += `<div class="review-wrong-ans">✗ "${escapeHtml(r.userVal)}" → ${escapeHtml(r.correct)}</div>`;
-      });
-    } else {
-      ansHtml += `<div class="review-correct-ans">✓ ${escapeHtml(q.correct)}</div>`;
-      if (!ok && ans.chosen) ansHtml += `<div class="review-wrong-ans">✗ You answered: ${escapeHtml(ans.chosen)}</div>`;
-    }
-
-    return `
-      <div class="review-item ${cls}" style="animation-delay:${i*0.04}s">
-        <div class="review-q"><span class="review-icon">${icon}</span><span>${escapeHtml(q.question)}</span></div>
-        <div class="review-answers">${ansHtml}</div>
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('progress-fill').style.width = '100%';
-  showScreen('screen-results');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// STUDY GUIDE
-// ═══════════════════════════════════════════════════════════════════
-async function generateStudyGuide() {
-  const apiKey = getApiKey();
-  if (!apiKey) { alert('API key not found.'); return; }
-
-  const missed = questions
-    .map((q, i) => ({ q, ans: userAnswers[i] }))
-    .filter(({ ans }) => ans && !ans.isCorrect);
-  if (!missed.length) return;
-
-  const btn = document.getElementById('study-guide-btn');
-  btn.disabled = true;
-  btn.classList.add('loading');
-  btn.innerHTML = '<span class="btn-spinner"></span>Generating…';
-
-  const missedSummary = missed.map(({ q, ans }) => {
-    if (q.type === 'multi_select') return `Question: ${q.question}\nCorrect answers: ${q.correct_answers?.join(', ')}\nMissed: ${ans.missed?.join(', ')}`;
-    if (q.type === 'fill_blank') return `Question: ${q.question}\nCorrect blanks: ${q.blanks?.map(b => b.answer).join(', ')}`;
-    return `Question: ${q.question}\nCorrect answer: ${q.correct}\nStudent answered: ${ans.chosen}`;
-  }).join('\n\n');
-
-  const prompt = `You are a patient, encouraging tutor. A student got these questions wrong on a biology quiz.
-
-For each missed question, write a focused study guide section that:
-1. Explains the concept clearly in plain student-friendly language
-2. Clarifies WHY the correct answer is right
-3. Explains the common misconception behind wrong answers
-4. Gives a memory tip, analogy, or example to help it stick
-
-Format: Use ### [Topic Name] as section headers. Write 2-3 paragraphs per topic. Keep it encouraging. Use markdown formatting only (no JSON).
-
-MISSED QUESTIONS:
-${missedSummary}`;
-
-  const panel = document.getElementById('sg-panel');
-  const output = document.getElementById('study-guide-output');
-  panel.style.display = 'block';
-  panel.classList.add('open');
-  output.innerHTML = `<div class="sg-skeleton">
-    <div class="sg-skel-bar title"></div><div class="sg-skel-bar full"></div>
-    <div class="sg-skel-bar full"></div><div class="sg-skel-bar med"></div>
-    <div class="sg-skel-bar short" style="margin-top:8px"></div>
-    <div class="sg-skel-bar title" style="margin-top:16px"></div>
-    <div class="sg-skel-bar full"></div><div class="sg-skel-bar full"></div>
-    <div class="sg-skel-bar med"></div>
-  </div>`;
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  try {
-    const raw = await callClaude(apiKey, prompt, 2000);
-    const html = raw
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-      .split('\n\n').map(p => p.trim()).filter(Boolean)
-      .map(p => p.startsWith('<h3>') || p.startsWith('<ul>') ? p : `<p>${p}</p>`)
-      .join('\n');
-
-    output.innerHTML = `
-      <div class="sg-content">${html}</div>
-      <div class="sg-divider"></div>
-      <div class="sg-actions">
-        <button class="btn btn-secondary btn-sm" onclick="downloadStudyGuideText()">💾 Save Guide</button>
-      </div>`;
-    document.getElementById('sg-panel-subtitle').textContent = `${missed.length} topic${missed.length > 1 ? 's' : ''} covered · Click to collapse`;
-    btn.textContent = '✅ Study Guide Ready';
-    btn.classList.remove('loading');
-  } catch(err) {
-    btn.disabled = false;
-    btn.classList.remove('loading');
-    btn.textContent = '📖 Generate Study Guide for Missed Topics';
-    output.innerHTML = `<div style="color:#ff8fa8;font-size:14px;">⚠️ ${err.message}</div>`;
-  }
-}
-
-function toggleSgPanel() {
-  document.getElementById('sg-panel').classList.toggle('open');
-}
-
-function downloadStudyGuideText() {
-  const el = document.querySelector('.sg-content');
-  if (!el) return;
-  downloadText('studypulse-study-guide.txt', el.innerText);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// FLASHCARD GENERATION
-// ═══════════════════════════════════════════════════════════════════
-async function generateFlashcards() {
-  const apiKey = getApiKey();
-  const content = getStudyContent();
-  const numCards = parseInt(document.getElementById('num-cards').value) || 15;
-  const errBox = document.getElementById('fc-setup-error');
-  errBox.classList.remove('show');
-
-  if (!apiKey) return showError(errBox, 'Please enter your Anthropic API key.');
-  if (!apiKey.startsWith('sk-ant')) return showError(errBox, "That doesn't look like a valid Anthropic key.");
-  if (!content || content.length < 50) return showError(errBox, 'Please paste some study content or load a study file.');
-
-  savedContent = content;
-  savedNumCards = numCards;
-
-  document.getElementById('loading-title').textContent = 'Generating your flashcards…';
-  document.getElementById('loading-sub').textContent = 'Claude is extracting key terms and definitions.';
-  showScreen('screen-loading');
-
-  const prompt = `You are an expert study tool creator. From the study content below, extract exactly ${numCards} key term-definition pairs.
-
-Rules:
-1. Term: concise word or short phrase (1-5 words max).
-2. Definition: clear, complete explanation in 1-3 sentences in plain student-friendly language.
-3. Pick the most important, testable concepts.
-4. Do not repeat similar terms.
-5. Definitions should stand alone.
-
-OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no explanation.
-
-[{ "term": "Mitosis", "definition": "Cell division that produces two genetically identical daughter cells from one parent cell. Used for growth, repair, and asexual reproduction." }]
-
-STUDY CONTENT:
-${content.slice(0, 12000)}`;
-
-  try {
-    const raw = await callClaude(apiKey, prompt, 3000);
-    const parsed = parseJSON(raw);
-    if (!Array.isArray(parsed) || !parsed.length) throw new Error('Received empty or invalid flashcard data.');
-    flashcards = parsed;
-    fcIndex = 0; fcFlipped = false;
-    showScreen('screen-flashcard');
-    renderFlashcard();
-  } catch(err) {
-    showScreen('screen-setup');
-    showError(document.getElementById('fc-setup-error'), '⚠️ ' + err.message);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// FLASHCARD RENDERING
-// ═══════════════════════════════════════════════════════════════════
-function renderFlashcard() {
-  const card = flashcards[fcIndex];
-  const total = flashcards.length;
-  document.getElementById('fc-counter').textContent = `Card ${fcIndex + 1} of ${total}`;
-  document.getElementById('fc-nav-label').textContent = `${fcIndex + 1} / ${total}`;
-  document.getElementById('fc-progress-fill').style.width = `${((fcIndex + 1) / total) * 100}%`;
-  document.getElementById('fc-front-text').textContent = card.definition;
-  document.getElementById('fc-back-text').textContent = card.term;
-  fcFlipped = false;
-  document.getElementById('flashcard').classList.remove('flipped');
-  document.getElementById('fc-prev').disabled = fcIndex === 0;
-  document.getElementById('fc-next').disabled = fcIndex === total - 1;
-}
-
-function flipCard() {
-  fcFlipped = !fcFlipped;
-  document.getElementById('flashcard').classList.toggle('flipped', fcFlipped);
-  document.getElementById('fc-flip-hint').textContent = fcFlipped ? 'Tap again to flip back' : 'Tap the card to flip it';
-}
-
-function fcNav(dir) {
-  const newIdx = fcIndex + dir;
-  if (newIdx < 0 || newIdx >= flashcards.length) return;
-  fcIndex = newIdx;
-  renderFlashcard();
-}
-
-function shuffleAndRestart() {
-  flashcards = flashcards.sort(() => Math.random() - 0.5);
-  fcIndex = 0;
-  renderFlashcard();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// NOTES TAB — AUTO SAVE
-// ═══════════════════════════════════════════════════════════════════
-function onNotesInput() {
-  fileModified = true;
-  setSaveStatus('saving');
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => {
-    if (studyFile) {
-      studyFile.notes_md = document.getElementById('notes-editor').value;
-      studyFile.last_modified = new Date().toISOString().split('T')[0];
-      setSaveStatus('saved');
-      fileModified = false;
-    }
-  }, 2000);
-}
-
-function setSaveStatus(state) {
-  const el = document.getElementById('save-status');
-  const text = document.getElementById('save-status-text');
-  el.className = 'save-status ' + state;
-  text.textContent = state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved ✓' : 'Unsaved';
-}
-
-function saveNotesManual() {
-  if (!studyFile) return;
-  clearTimeout(autoSaveTimer);
-  studyFile.notes_md = document.getElementById('notes-editor').value;
-  studyFile.last_modified = new Date().toISOString().split('T')[0];
-  setSaveStatus('saved');
-  fileModified = false;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// LOAD STUDY FILE
-// ═══════════════════════════════════════════════════════════════════
-function loadSession(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const session = JSON.parse(e.target.result);
-
-      // New format: study file
-      if (session.notes_md !== undefined || session.unit) {
-        studyFile = session;
-        applyStudyFile();
-        return;
-      }
-
-      // Legacy format: quiz/flashcard session
-      if (!session.type || !session.version) throw new Error('Invalid session file.');
-
-      if (session.apiKey) {
-        keyInput.value = session.apiKey;
-        keyStatus.className = 'api-status' + (session.apiKey.startsWith('sk-ant') ? ' active' : '');
-      }
-      if (session.content) {
-        document.getElementById('content-input').value = session.content;
-        savedContent = session.content;
-      }
-      if (session.type === 'quiz') {
-        savedNumQ = session.numQuestions || 10;
-        savedDifficulty = session.difficulty || 'standard';
-        document.getElementById('num-questions').value = savedNumQ;
-        document.getElementById('difficulty').value = savedDifficulty;
-        questions = session.questions.map(q => normalizeQuestion(q));
-        userAnswers = new Array(questions.length).fill(null);
-        currentQ = 0; answered = false;
-        setMode('quiz');
-        showScreen('screen-quiz');
-        renderQuestion();
-      } else if (session.type === 'flashcard') {
-        savedNumCards = session.numCards || 15;
-        document.getElementById('num-cards').value = savedNumCards;
-        flashcards = session.cards || [];
-        fcIndex = 0; fcFlipped = false;
-        setMode('flashcard');
-        showScreen('screen-flashcard');
-        renderFlashcard();
-      }
-    } catch(err) {
-      alert('Could not load file: ' + err.message);
-    }
-    event.target.value = '';
+function renderFc(){const c=flashcards[fcIdx],total=flashcards.length;document.getElementById('fc-count').textContent=`Card ${fcIdx+1} of ${total}`;document.getElementById('fc-nav-lbl').textContent=`${fcIdx+1}/${total}`;document.getElementById('fc-prog').style.width=`${((fcIdx+1)/total)*100}%`;document.getElementById('fc-front').textContent=c.definition;document.getElementById('fc-back').textContent=c.term;fcFlipped=false;document.getElementById('fc-card').classList.remove('flipped');document.getElementById('fc-prev').disabled=fcIdx===0;document.getElementById('fc-next').disabled=fcIdx===total-1;}
+function flipCard(){fcFlipped=!fcFlipped;document.getElementById('fc-card').classList.toggle('flipped',fcFlipped);document.getElementById('fc-hint').textContent=fcFlipped?'Tap to flip back':'Tap the card to flip it';}
+function fcNav(d){const n=fcIdx+d;if(n<0||n>=flashcards.length)return;fcIdx=n;renderFc();}
+function shuffleFc(){flashcards=flashcards.sort(()=>Math.random()-.5);fcIdx=0;renderFc();}
+
+function onNotesInput(){fileModified=true;setStatus('saving');clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(()=>{if(studyFile){studyFile.notes_md=document.getElementById('notes-editor').value;studyFile.last_modified=today();setStatus('saved');fileModified=false;}},2000);}
+function setStatus(s){const el=document.getElementById('save-status');const tx=document.getElementById('save-txt');el.className='save-status '+s;tx.textContent=s==='saving'?'Saving…':s==='saved'?'Saved ✓':'Unsaved';}
+function saveNotes(){if(!studyFile)return;clearTimeout(autoSaveTimer);studyFile.notes_md=document.getElementById('notes-editor').value;studyFile.last_modified=today();setStatus('saved');fileModified=false;}
+
+function loadFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    try{
+      const s=JSON.parse(ev.target.result);
+      if(s.notes_md!==undefined||s.unit){studyFile=s;applyFile();return;}
+      if(!s.type||!s.version)throw new Error('Invalid file.');
+      if(s.apiKey){keyEl.value=s.apiKey;dotEl.className='api-dot'+(s.apiKey.startsWith('sk-ant')?' on':'');}
+      if(s.content){document.getElementById('content-input').value=s.content;savedContent=s.content;}
+      if(s.type==='quiz'){savedNumQ=s.numQuestions||15;savedDiff=s.difficulty||'challenging';document.getElementById('num-q').value=savedNumQ;document.getElementById('difficulty').value=savedDiff;questions=s.questions.map(normalizeQ);userAnswers=new Array(questions.length).fill(null);currentQ=0;answered=false;setMode('quiz');showScreen('screen-quiz');renderQ();}
+      else if(s.type==='flashcard'){flashcards=s.cards||[];fcIdx=0;fcFlipped=false;setMode('flashcard');showScreen('screen-fc');renderFc();}
+    }catch(err){alert('Could not load file: '+err.message);}
+    e.target.value='';
   };
   reader.readAsText(file);
 }
 
-function applyStudyFile() {
-  // Show file name in header
-  const name = studyFile.unit || 'Study File';
-  document.getElementById('header-file-name').textContent = '📂 ' + name;
-
-  // Populate notes tab
-  document.getElementById('notes-no-file').style.display = 'none';
-  document.getElementById('notes-editor-area').style.display = 'block';
-  document.getElementById('notes-unit-title').textContent = studyFile.unit || 'My Notes';
-  document.getElementById('notes-editor').value = studyFile.notes_md || '';
-  setSaveStatus('saved');
-
-  // Show scope toggle in quiz settings
-  document.getElementById('scope-toggle-row').style.display = 'block';
-  document.getElementById('content-card').style.display = 'none';
-
-  // Update notes meta
-  const meta = document.getElementById('notes-meta');
-  const parts = [];
-  if (studyFile.created) parts.push(`Created ${studyFile.created}`);
-  if (studyFile.last_modified) parts.push(`Updated ${studyFile.last_modified}`);
-  meta.innerHTML = parts.map(p => `<span class="notes-meta-chip">${p}</span>`).join('');
-
-  // Update settings file info
-  document.getElementById('settings-file-info').innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;">
-      <div><strong>${escapeHtml(studyFile.unit || 'Untitled')}</strong></div>
-      <div style="color:var(--muted);">Created: ${studyFile.created || '–'} · Updated: ${studyFile.last_modified || '–'}</div>
-      ${studyFile.scope_check ? `<div style="color:var(--muted);">Coverage: ${studyFile.scope_check.coverage_score || 0}%</div>` : ''}
-    </div>
-  `;
-
-  // Restore scope data if present
-  if (studyFile.scope_check) {
-    scopeData = studyFile.scope_check;
-    updateScopeBar();
-  }
+function applyFile(){
+  const name=studyFile.unit||'Study File';
+  const hf=document.getElementById('header-file');hf.textContent='📂 '+name;hf.classList.add('show');
+  document.getElementById('notes-empty').style.display='none';document.getElementById('notes-area').style.display='block';
+  document.getElementById('notes-title').textContent=studyFile.unit||'My Notes';
+  document.getElementById('notes-editor').value=studyFile.notes_md||'';setStatus('saved');
+  document.getElementById('scope-toggle-row').style.display='block';document.getElementById('content-card').style.display='none';
+  const meta=document.getElementById('notes-meta');const parts=[];if(studyFile.created)parts.push(`Created ${studyFile.created}`);if(studyFile.last_modified)parts.push(`Updated ${studyFile.last_modified}`);meta.innerHTML=parts.map(p=>`<span class="meta-chip">${p}</span>`).join('');
+  document.getElementById('s-file-info').innerHTML=`<div style="display:flex;flex-direction:column;gap:9px;font-size:14px;"><div><strong>${esc(studyFile.unit||'Untitled')}</strong></div><div style="color:var(--text3);">Created: ${studyFile.created||'–'} · Updated: ${studyFile.last_modified||'–'}</div>${studyFile.scope_check?`<div style="color:var(--text3);">Coverage: ${studyFile.scope_check.coverage_score||0}%</div>`:''}</div>`;
+  if(studyFile.scope_check){scopeData=studyFile.scope_check;updateScopeBar();}
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// ADMIN — GENERATE STUDY FILE
-// ═══════════════════════════════════════════════════════════════════
-async function adminGenerate() {
-  const apiKey = document.getElementById('admin-api-key').value.trim() || keyInput.value.trim();
-  const unit = document.getElementById('admin-unit').value.trim();
-  const key = document.getElementById('admin-key').value.trim();
-  const notes = document.getElementById('admin-notes').value.trim();
-  const errBox = document.getElementById('admin-error');
-  errBox.classList.remove('show');
-
-  if (!apiKey || !apiKey.startsWith('sk-ant')) return showError(errBox, 'Please enter a valid Anthropic API key.');
-  if (!unit) return showError(errBox, 'Please enter a unit name.');
-  if (!notes || notes.length < 20) return showError(errBox, 'Please paste study notes.');
-
-  // Run scope check as part of file generation
-  const scopePrompt = `Analyze the following study material for the unit: "${unit}".
-
-Return ONLY a JSON object:
-{
-  "covered_concepts": ["concept1"],
-  "missing_concepts": [{"concept": "name", "reason": "why tested"}],
-  "coverage_score": 72
+async function adminGenerate(){
+  const key=document.getElementById('admin-key').value.trim()||keyEl.value.trim();
+  const unit=document.getElementById('admin-unit').value.trim();
+  const notes=document.getElementById('admin-notes').value.trim();
+  const err=document.getElementById('admin-err');err.classList.remove('show');
+  if(!key||!key.startsWith('sk-ant'))return showErr(err,'Please enter a valid Anthropic API key.');
+  if(!unit)return showErr(err,'Please enter a unit name.');
+  if(!notes||notes.length<20)return showErr(err,'Please paste study notes.');
+  const btn=document.querySelector('#tab-admin .btn-primary');btn.disabled=true;btn.innerHTML='<span class="btn-spin"></span> Analyzing…';
+  let sc=null;
+  try{const raw=await claude(key,`Analyze study material for unit: "${unit}". Return ONLY JSON: {"covered_concepts":["c1"],"missing_concepts":[{"concept":"name","reason":"why tested"}],"coverage_score":72}\nJSON only.\nMATERIAL:\n${notes.slice(0,8000)}`,800);sc=parseJSON(raw);}catch(e){}
+  const fileObj={version:2,unit,created:today(),last_modified:today(),last_compiled:null,notes_md:notes,scope_check:sc,questions:[]};
+  dlJSON(`studypulse-${unit.toLowerCase().replace(/\s+/g,'-').slice(0,30)}-${stamp()}.json`,fileObj);
+  btn.disabled=false;btn.innerHTML='✅ File Generated';setTimeout(()=>{btn.innerHTML='Generate Study File ⚡';},3000);
 }
 
-JSON only, no explanation.
+function downloadFile(){if(!studyFile)return;saveNotes();dlJSON(`studypulse-${(studyFile.unit||'notes').toLowerCase().replace(/\s+/g,'-').slice(0,30)}-${stamp()}.json`,studyFile);}
+function copyJson(){if(!studyFile)return;saveNotes();navigator.clipboard.writeText(JSON.stringify(studyFile,null,2)).then(()=>alert('JSON copied. Paste into a .json file.')).catch(()=>alert('Copy failed. Use Download instead.'));}
+function saveSession(){dlJSON(`studypulse-quiz-${stamp()}.json`,{type:'quiz',version:1,savedAt:new Date().toISOString(),apiKey:keyEl.value.trim(),content:savedContent,numQuestions:savedNumQ,difficulty:savedDiff,questions:questions.map(q=>q.type==='single_select'?{question:q.question,correct:q.correct,distractors:q.choices.filter(c=>c!==q.correct)}:q)});}
+function saveFc(){dlJSON(`studypulse-fc-${stamp()}.json`,{type:'flashcard',version:1,savedAt:new Date().toISOString(),content:savedContent,numCards:savedNumFc,cards:flashcards});}
+function resetToSetup(){questions=[];userAnswers=[];currentQ=0;answered=false;flashcards=[];fcIdx=0;fcFlipped=false;multiSel.clear();showScreen('screen-setup');}
+window.addEventListener('beforeunload',e=>{if(fileModified){e.preventDefault();e.returnValue='';}});
 
-STUDY MATERIAL:
-${notes.slice(0, 8000)}`;
-
-  const btn = document.querySelector('#tab-admin .btn-primary');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="btn-spinner"></span>Analyzing…';
-
-  let scopeResult = null;
-  try {
-    const raw = await callClaude(apiKey, scopePrompt, 800);
-    scopeResult = parseJSON(raw);
-  } catch(e) {
-    // Scope check optional — continue without it
-  }
-
-  const fileObj = {
-    version: 2,
-    unit,
-    created: new Date().toISOString().split('T')[0],
-    last_modified: new Date().toISOString().split('T')[0],
-    last_compiled: null,
-    answer_key: key,
-    notes_md: notes,
-    scope_check: scopeResult,
-    questions: []
-  };
-
-  const filename = `studypulse-${unit.toLowerCase().replace(/\s+/g, '-').slice(0, 30)}-${datestamp()}.json`;
-  downloadJSON(filename, fileObj);
-
-  btn.disabled = false;
-  btn.innerHTML = '✅ File Generated — Check Downloads';
-  setTimeout(() => { btn.innerHTML = 'Generate Study File ⚡'; }, 3000);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// DOWNLOAD STUDY FILE (from notes tab)
-// ═══════════════════════════════════════════════════════════════════
-function downloadStudyFile() {
-  if (!studyFile) return;
-  saveNotesManual();
-  const filename = `studypulse-${(studyFile.unit || 'notes').toLowerCase().replace(/\s+/g, '-').slice(0, 30)}-${datestamp()}.json`;
-  downloadJSON(filename, studyFile);
-}
-
-function copyJsonFallback() {
-  if (!studyFile) return;
-  saveNotesManual();
-  navigator.clipboard.writeText(JSON.stringify(studyFile, null, 2))
-    .then(() => alert('JSON copied to clipboard. Paste into a .json file.'))
-    .catch(() => alert('Could not copy. Try the Download button instead.'));
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// SAVE / LOAD LEGACY SESSIONS
-// ═══════════════════════════════════════════════════════════════════
-function saveQuizSession() {
-  const session = {
-    type: 'quiz', version: 1,
-    savedAt: new Date().toISOString(),
-    apiKey: keyInput.value.trim(),
-    content: savedContent,
-    numQuestions: savedNumQ,
-    difficulty: savedDifficulty,
-    questions: questions.map(q => {
-      if (q.type === 'multi_select') return q;
-      if (q.type === 'fill_blank') return q;
-      return { question: q.question, correct: q.correct, distractors: q.choices.filter(c => c !== q.correct) };
-    })
-  };
-  downloadJSON(`studypulse-quiz-${datestamp()}.json`, session);
-}
-
-function saveFcSession() {
-  const session = {
-    type: 'flashcard', version: 1,
-    savedAt: new Date().toISOString(),
-    apiKey: keyInput.value.trim(),
-    content: savedContent,
-    numCards: savedNumCards,
-    cards: flashcards
-  };
-  downloadJSON(`studypulse-flashcards-${datestamp()}.json`, session);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// RESET
-// ═══════════════════════════════════════════════════════════════════
-function resetToSetup() {
-  questions = []; userAnswers = []; currentQ = 0; answered = false;
-  flashcards = []; fcIndex = 0; fcFlipped = false;
-  multiSelectedSet.clear();
-  showScreen('screen-setup');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// BEFORE UNLOAD WARNING
-// ═══════════════════════════════════════════════════════════════════
-window.addEventListener('beforeunload', (e) => {
-  if (fileModified) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════
-function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
-
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function downloadJSON(filename, obj) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function downloadText(filename, text) {
-  const blob = new Blob([text], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function datestamp() {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-}
+function showErr(el,msg){el.textContent=msg;el.classList.add('show');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function dlJSON(name,obj){const b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function dlText(name,text){const b=new Blob([text],{type:'text/plain'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function today(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function stamp(){const d=new Date();return`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
 </script>
 </body>
 </html>
