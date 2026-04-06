@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
 <title>StudyPulse v2</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
 <style>
@@ -773,292 +773,535 @@ input[type="number"] { width: 90px; }
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app-shell">
+<div class="main-content">
 
-<!-- ══════════════════════════════════════════
-     SETUP SCREEN
-══════════════════════════════════════════ -->
-<div id="screen-setup" class="screen active">
+<!-- ══════════════════════ QUIZ TAB ══════════════════════ -->
+<div id="tab-quiz" class="tab-screen active">
 
+  <!-- SETUP -->
+  <div id="screen-setup" class="screen active">
+    <div class="header">
+      <div class="logo-mark">&#x26A1;</div>
+      <div class="logo-name"><em>Study</em>Pulse</div>
+      <div class="logo-version">v2.0</div>
+    </div>
+    <div class="mode-toggle a1">
+      <button class="mode-btn active" id="mode-quiz-btn" onclick="setMode('quiz')">&#x26A1; Quiz Mode</button>
+      <button class="mode-btn" id="mode-fc-btn" onclick="setMode('flashcard')">&#x1F0CF; Flashcards</button>
+    </div>
+    <div class="card a1">
+      <div class="card-label">Anthropic API Key</div>
+      <div class="api-row">
+        <div class="api-dot" id="api-dot"></div>
+        <div class="api-input-wrap">
+          <input type="password" id="api-key" placeholder="sk-ant-api03-&hellip;" autocomplete="off"/>
+          <button class="key-eye" onclick="toggleKey()">&#x1F441;</button>
+        </div>
+      </div>
+      <div class="api-note">Held in memory only &mdash; never stored beyond this session.</div>
+    </div>
+    <label class="load-strip a2">
+      <input type="file" id="load-file" accept=".json" onchange="loadSession(event)"/>
+      <div class="load-strip-icon">&#x1F4C2;</div>
+      <div class="load-strip-info">
+        <div class="load-strip-title">Load Saved Session</div>
+        <div class="load-strip-sub">Resume a saved quiz, flashcard set, or study file</div>
+      </div>
+      <span style="color:var(--text3);font-size:19px">&rsaquo;</span>
+    </label>
+    <div class="card a2">
+      <div class="card-label">Study Content</div>
+      <div class="content-tabs">
+        <button class="content-tab active" id="ctab-paste" onclick="switchContentTab('paste')">&#x270F;&#xFE0F; Paste Text</button>
+        <button class="content-tab" id="ctab-upload" onclick="switchContentTab('upload')">&#x1F4CE; Upload File</button>
+      </div>
+      <div class="tab-panel active" id="cpanel-paste">
+        <textarea id="content-text" placeholder="Paste your notes, slides, article, or any text here&hellip;"></textarea>
+      </div>
+      <div class="tab-panel" id="cpanel-upload">
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="upload-file" accept="image/*,.pdf" onchange="handleFileUpload(event)"/>
+          <div class="upload-icon">&#x1F4C4;</div>
+          <div class="upload-title">Tap to upload PDF or image</div>
+          <div class="upload-sub">PDF &middot; JPG &middot; PNG &middot; HEIC &mdash; extracted locally, free</div>
+        </div>
+        <div class="ocr-progress" id="ocr-progress">
+          <div class="ocr-bar-wrap"><div class="ocr-bar" id="ocr-bar"></div></div>
+          <div class="ocr-label" id="ocr-label">Initializing&hellip;</div>
+        </div>
+        <div class="extracted-preview" id="extracted-preview">
+          <div class="extracted-header">
+            <span class="extracted-title">&#x2705; Text extracted</span>
+            <span class="extracted-chars" id="extracted-chars">0 chars</span>
+          </div>
+          <div class="extracted-text" id="extracted-text"></div>
+        </div>
+        <div class="ocr-fallback" id="ocr-fallback">
+          <div class="ocr-fallback-row">
+            <span>&#x26A0;&#xFE0F; OCR captured very little text &mdash; image may be low quality.</span>
+            <button class="btn btn-amber btn-sm" onclick="fallbackVision()">Try Claude Vision</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card a3" id="quiz-settings">
+      <div class="card-label">Quiz Settings</div>
+      <div id="scope-toggle-row" style="display:none">
+        <div class="toggle-row" style="padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--border);">
+          <div class="toggle-info">
+            <div class="toggle-label">Full Scope Mode</div>
+            <div class="toggle-desc">Supplement missing curriculum concepts <span id="scope-coverage-inline"></span></div>
+          </div>
+          <label class="toggle-sw">
+            <input type="checkbox" id="scope-toggle-quiz" onchange="syncScopeToggle('quiz')"/>
+            <span class="tgl-track"></span>
+          </label>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="field">
+          <div class="field-label">Questions</div>
+          <input type="number" id="num-questions" value="10" min="3" max="25"/>
+        </div>
+        <div class="field field-grow">
+          <div class="field-label">Difficulty</div>
+          <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="standard" selected>Standard</option>
+            <option value="challenging">Challenging</option>
+            <option value="certification">Certification</option>
+          </select>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="generateQuiz()">Generate &#x26A1;</button>
+        </div>
+      </div>
+      <div class="err-box" id="quiz-error"></div>
+    </div>
+    <div class="card a3" id="fc-settings" style="display:none">
+      <div class="card-label">Flashcard Settings</div>
+      <div class="settings-row">
+        <div class="field">
+          <div class="field-label">Cards</div>
+          <input type="number" id="num-cards" value="15" min="5" max="40"/>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" onclick="generateFlashcards()">Generate &#x1F0CF;</button>
+        </div>
+      </div>
+      <div class="err-box" id="fc-error"></div>
+    </div>
+  </div><!-- /screen-setup -->
+
+  <!-- LOADING -->
+  <div id="screen-loading" class="screen">
+    <div class="loading-screen">
+      <div class="loading-ring">
+        <svg viewBox="0 0 56 56">
+          <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#ec4899"/>
+          </linearGradient></defs>
+          <circle class="track" cx="28" cy="28" r="24"/>
+          <circle class="arc" cx="28" cy="28" r="24" stroke="url(#rg)"/>
+        </svg>
+      </div>
+      <div class="loading-title" id="loading-title">Building your quiz&hellip;</div>
+      <div class="loading-step" id="loading-step">Reading your content</div>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="screen-quiz" class="screen">
+    <div class="progress-header">
+      <span class="progress-label" id="q-progress-label">Question 1 of 10</span>
+      <button class="btn btn-ghost" onclick="exitToSetup()">&#x2715; Exit</button>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill active" id="q-progress-fill" style="width:0%"></div>
+    </div>
+    <div id="question-area"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="screen-results" class="screen">
+    <div class="results-hero">
+      <div class="results-emoji" id="res-emoji">&#x1F389;</div>
+      <div class="results-title" id="res-title">Quiz Complete!</div>
+      <div class="results-sub" id="res-sub">Here's how you did</div>
+      <div class="score-pill">
+        <div class="score-dot" id="res-score-dot"></div>
+        <span id="res-score-text"></span>
+      </div>
+    </div>
+    <div class="delta-banner" id="delta-banner">
+      <div class="delta-banner-title">&#x1F4CD; Targeted concepts this round</div>
+      <div class="delta-concepts" id="delta-concepts"></div>
+    </div>
+    <div class="suggest-full-banner" id="suggest-full-banner">
+      <div class="suggest-full-title">&#x1F4A1; You've covered a lot of ground</div>
+      <div class="suggest-full-sub">You had more than 7 missed concepts &mdash; a full fresh quiz on this material will reinforce everything more effectively right now.</div>
+      <button class="btn btn-emerald btn-full" onclick="tryAgain()">&#x1F504; Generate Full Quiz on This Topic</button>
+    </div>
+    <div class="sg-section" id="sg-section" style="display:none">
+      <div class="sg-trigger">
+        <button class="btn btn-emerald btn-full" id="sg-btn" onclick="generateStudyGuide()">&#x1F4D6; Generate Study Guide for Missed Topics</button>
+        <div class="sg-trigger-sub">Claude explains what you missed in plain terms</div>
+      </div>
+      <div class="sg-panel" id="sg-panel" style="display:none">
+        <div class="sg-panel-head" onclick="toggleSgPanel()">
+          <span style="font-size:17px">&#x1F4D6;</span>
+          <div class="sg-panel-head-text">
+            <div class="sg-panel-title">Study Guide &mdash; Missed Topics</div>
+            <div class="sg-panel-sub" id="sg-panel-sub">Click to expand</div>
+          </div>
+          <span class="sg-chevron">&#x2304;</span>
+        </div>
+        <div class="sg-body"><div class="sg-inner" id="sg-output"></div></div>
+      </div>
+    </div>
+    <div id="targeted-retry-section" style="display:none;margin-bottom:14px;animation:fadeUp .4s ease both">
+      <button class="btn btn-amber btn-full" id="targeted-retry-btn" onclick="startTargetedRetry()">&#x1F3AF; Practice My Weak Areas</button>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:5px" id="targeted-retry-sub"></div>
+    </div>
+    <div class="review-list" id="review-list"></div>
+    <div class="results-actions">
+      <button class="btn btn-primary btn-full" onclick="tryAgain()">&#x1F504; New Questions, Same Topic</button>
+      <div class="results-actions-row">
+        <button class="btn btn-secondary" onclick="saveQuizSession()">&#x1F4BE; Save</button>
+        <button class="btn btn-secondary" onclick="exitToSetup()">&#x1F4DD; New Content</button>
+      </div>
+    </div>
+  </div><!-- /screen-results -->
+
+  <!-- FLASHCARD -->
+  <div id="screen-flashcard" class="screen">
+    <div class="fc-header">
+      <span class="fc-counter" id="fc-counter">Card 1 of 15</span>
+      <button class="btn btn-ghost" onclick="exitToSetup()">&#x2715; Exit</button>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill active" id="fc-progress-fill" style="width:0%"></div>
+    </div>
+    <div class="flashcard-scene" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="fc-face fc-front">
+          <div class="fc-label">Definition</div>
+          <div class="fc-text" id="fc-front-text">Loading&hellip;</div>
+          <div class="fc-tap-hint">Tap to reveal the term</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">Term</div>
+          <div class="fc-text" id="fc-back-text">&hellip;</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-nav">
+      <button class="fc-nav-btn" id="fc-prev" onclick="fcNav(-1)" disabled>&lsaquo;</button>
+      <span class="fc-pos" id="fc-pos">1 / 15</span>
+      <button class="fc-nav-btn" id="fc-next" onclick="fcNav(1)">&rsaquo;</button>
+    </div>
+    <div class="fc-actions">
+      <button class="btn btn-primary btn-full" onclick="shuffleRestart()">&#x1F500; Shuffle &amp; Restart</button>
+      <div class="fc-actions-row">
+        <button class="btn btn-secondary" onclick="saveFcSession()">&#x1F4BE; Save</button>
+        <button class="btn btn-secondary" onclick="exitToSetup()">&#x1F4DD; New Content</button>
+      </div>
+    </div>
+  </div><!-- /screen-flashcard -->
+
+</div><!-- /tab-quiz -->
+
+<!-- ══════════════════════ NOTES TAB ══════════════════════ -->
+<div id="tab-notes" class="tab-screen">
   <div class="header">
-    <div class="logo-mark">⚡</div>
-    <div class="logo-name"><em>Study</em>Pulse</div>
-    <div class="logo-version">v2.0</div>
+    <div class="logo-mark">&#x1F4DD;</div>
+    <div class="logo-name">Notes</div>
   </div>
-
-  <!-- Mode toggle -->
-  <div class="mode-toggle">
-    <button class="mode-btn active" id="mode-quiz-btn" onclick="setMode('quiz')">⚡ Quiz Mode</button>
-    <button class="mode-btn" id="mode-fc-btn" onclick="setMode('flashcard')">🃏 Flashcards</button>
+  <div id="notes-empty" class="notes-empty">
+    <div class="notes-empty-icon">&#x1F4C2;</div>
+    <div class="notes-empty-title">No study file loaded</div>
+    <div class="notes-empty-sub">Load a study file from the Quiz tab to view and edit notes here.</div>
   </div>
+  <div id="notes-content" style="display:none">
+    <div class="file-info" id="notes-file-info-row">
+      <div class="file-info-icon">&#x1F4C4;</div>
+      <div class="file-info-detail">
+        <div class="file-info-name" id="notes-file-name">Unit name</div>
+        <div class="file-info-meta" id="notes-file-meta">Created &mdash;</div>
+      </div>
+    </div>
+    <div class="notes-status">
+      <div class="notes-dot" id="notes-dot"></div>
+      <span id="notes-status-text">Ready</span>
+    </div>
+    <textarea id="notes-textarea" placeholder="Your study notes will appear here&hellip;" oninput="onNotesInput()"></textarea>
+    <div class="notes-actions">
+      <button class="btn btn-primary" onclick="saveNotes()">&#x1F4BE; Save Notes</button>
+      <button class="btn btn-secondary" onclick="downloadFile()">&#x2B07;&#xFE0F; Download File</button>
+      <button class="btn btn-secondary" onclick="copyJson()">&#x1F4CB; Copy JSON</button>
+    </div>
+  </div>
+</div>
 
-  <!-- API Key -->
+<!-- ══════════════════════ SETTINGS TAB ══════════════════════ -->
+<div id="tab-settings" class="tab-screen">
+  <div class="header">
+    <div class="logo-mark">&#x2699;&#xFE0F;</div>
+    <div class="logo-name">Settings</div>
+  </div>
+  <div class="settings-section a1">
+    <div class="settings-section-title">Scope</div>
+    <div class="card" style="margin-bottom:0">
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Full Scope Mode</div>
+          <div class="toggle-desc">Supplement missing curriculum concepts. Supplemented questions show a &#x1F535; badge.</div>
+        </div>
+        <label class="toggle-sw">
+          <input type="checkbox" id="scope-toggle-settings" onchange="syncScopeToggle('settings')"/>
+          <span class="tgl-track"></span>
+        </label>
+      </div>
+      <div id="settings-scope-bar" style="display:none;padding-top:10px">
+        <div class="scope-bar-wrap">
+          <div class="scope-bar-track"><div class="scope-bar-fill" id="settings-scope-fill" style="width:0%"></div></div>
+          <div class="scope-bar-label" id="settings-scope-label">Coverage: 0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section a2">
+    <div class="settings-section-title">Question Mix</div>
+    <div class="card" style="margin-bottom:0">
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Multi-Select Questions</div>
+          <div class="toggle-desc">Include &ldquo;choose exactly N&rdquo; questions with partial credit scoring</div>
+        </div>
+        <label class="toggle-sw">
+          <input type="checkbox" id="setting-multiselect" checked/>
+          <span class="tgl-track"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="toggle-label">Fill-in-the-Blank</div>
+          <div class="toggle-desc">Include paired sentence completion questions</div>
+        </div>
+        <label class="toggle-sw">
+          <input type="checkbox" id="setting-fitb" checked/>
+          <span class="tgl-track"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section a3">
+    <div class="settings-section-title">Loaded File</div>
+    <div class="card" id="settings-file-info" style="margin-bottom:0">
+      <div style="color:var(--text3);font-size:13px;">No study file loaded.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ ADMIN TAB ══════════════════════ -->
+<div id="tab-admin" class="tab-screen">
+  <div class="header">
+    <div class="logo-mark">&#x1F527;</div>
+    <div class="logo-name">Admin</div>
+  </div>
+  <div class="admin-banner a1">
+    <div class="admin-icon">&#x2699;&#xFE0F;</div>
+    <div>
+      <div class="admin-title">Admin &mdash; Create Study File</div>
+      <div class="admin-desc">Paste the unit name and study notes. Generate a file to send to the student once. They handle everything else from there.</div>
+    </div>
+  </div>
   <div class="card a1">
-    <div class="card-label">Anthropic API Key</div>
+    <div class="card-label">API Key</div>
     <div class="api-row">
-      <div class="api-dot" id="api-dot"></div>
+      <div class="api-dot" id="admin-dot"></div>
       <div class="api-input-wrap">
-        <input type="password" id="api-key" placeholder="sk-ant-api03-…" autocomplete="off" />
-        <button class="key-eye" id="key-eye" onclick="toggleKey()">👁</button>
+        <input type="password" id="admin-key" placeholder="sk-ant-api03-&hellip;" autocomplete="off" oninput="onAdminKey()"/>
+        <button class="key-eye" onclick="toggleAdminKey()">&#x1F441;</button>
       </div>
     </div>
-    <div class="api-note">Held in memory only — never stored or transmitted beyond the API.</div>
   </div>
-
-  <!-- Load session -->
-  <label class="load-strip">
-    <input type="file" id="load-file" accept=".json" onchange="loadSession(event)" />
-    <div class="load-strip-icon">📂</div>
-    <div class="load-strip-info">
-      <div class="load-strip-title">Load Saved Session</div>
-      <div class="load-strip-sub">Resume a previously saved quiz or flashcard set</div>
-    </div>
-    <span style="color:var(--text3);font-size:20px">›</span>
-  </label>
-
-  <!-- Content input -->
   <div class="card a2">
-    <div class="card-label">Study Content</div>
-    <div class="content-tabs">
-      <button class="content-tab active" id="tab-paste" onclick="switchTab('paste')">✏️ Paste Text</button>
-      <button class="content-tab" id="tab-upload" onclick="switchTab('upload')">📎 Upload File</button>
-    </div>
+    <div class="card-label">Unit Name</div>
+    <input type="text" id="admin-unit" placeholder="e.g. Cell Division and Differentiation"/>
+  </div>
+  <div class="card a2">
+    <div class="card-label">Study Notes (Markdown)</div>
+    <textarea id="admin-notes" placeholder="Paste study material in markdown&#x2026;&#10;&#10;# Cell Division&#10;## Mitosis&#10;Produces two identical daughter cells..."></textarea>
+  </div>
+  <div class="card a3">
+    <button class="btn btn-primary btn-full" onclick="adminGenerate()">Generate Study File &#x26A1;</button>
+  </div>
+  <div class="err-box" id="admin-err"></div>
+</div>
 
-    <!-- Paste panel -->
-    <div class="tab-panel active" id="panel-paste">
-      <textarea id="content-text" placeholder="Paste your notes, slides, article, or any text here…"></textarea>
-    </div>
+</div><!-- /main-content -->
 
-    <!-- Upload panel -->
-    <div class="tab-panel" id="panel-upload">
-      <div class="upload-zone" id="upload-zone">
-        <input type="file" id="upload-file" accept="image/*,.pdf" onchange="handleFileUpload(event)" />
-        <div class="upload-icon">📄</div>
-        <div class="upload-title">Tap to upload PDF or image</div>
-        <div class="upload-sub">PDF · JPG · PNG · HEIC — text extracted locally, free</div>
-      </div>
-      <!-- OCR progress -->
-      <div class="ocr-progress" id="ocr-progress">
-        <div class="ocr-bar-wrap"><div class="ocr-bar" id="ocr-bar"></div></div>
-        <div class="ocr-label" id="ocr-label">Initializing…</div>
-      </div>
-      <!-- Extracted preview -->
-      <div class="extracted-preview" id="extracted-preview">
-        <div class="extracted-header">
-          <span class="extracted-title">✅ Text extracted</span>
-          <span class="extracted-chars" id="extracted-chars">0 chars</span>
+<!-- TAB BAR -->
+<nav class="tab-bar">
+  <button class="tab-btn active" id="tb-quiz"     onclick="switchTab('quiz')">     <span class="tab-icon">&#x26A1;</span><span class="tab-lbl">Quiz</span></button>
+  <button class="tab-btn"        id="tb-notes"    onclick="switchTab('notes')">    <span class="tab-icon">&#x1F4DD;</span><span class="tab-lbl">Notes</span></button>
+  <button class="tab-btn"        id="tb-settings" onclick="switchTab('settings')"> <span class="tab-icon">&#x2699;&#xFE0F;</span><span class="tab-lbl">Settings</span></button>
+  <button class="tab-btn"        id="tb-admin"    onclick="switchTab('admin')">    <span class="tab-icon">&#x1F527;</span><span class="tab-lbl">Admin</span></button>
+</nav>
+
+</div><!-- /app-shell -->
+
+<!-- SCOPE MODAL -->
+<div id="scope-modal" class="modal-overlay" style="display:none" onclick="closeModalOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">&#x1F4CB; Scope Check</div>
+    <div class="modal-sub" id="scope-modal-sub">Comparing your notes against standard curriculum.</div>
+    <div id="scope-modal-body">
+      <div class="loading-screen" style="padding:40px 0">
+        <div class="loading-ring" style="width:40px;height:40px;margin-bottom:16px">
+          <svg viewBox="0 0 56 56">
+            <circle class="track" cx="28" cy="28" r="24"/>
+            <circle class="arc" cx="28" cy="28" r="24" stroke="url(#rg)"/>
+          </svg>
         </div>
-        <div class="extracted-text" id="extracted-text"></div>
-      </div>
-      <!-- OCR fallback warning -->
-      <div class="ocr-fallback" id="ocr-fallback">
-        <div class="ocr-fallback-row">
-          <span>⚠️ OCR captured very little text — image may be low quality.</span>
-          <button class="btn btn-amber btn-sm" onclick="fallbackVisionUpload()">Try Claude Vision</button>
-        </div>
+        <div class="loading-step">Analyzing coverage&hellip;</div>
       </div>
     </div>
-  </div>
-
-  <!-- Quiz settings -->
-  <div class="card a3" id="quiz-settings">
-    <div class="card-label">Quiz Settings</div>
-    <div class="settings-row">
-      <div class="field">
-        <div class="field-label">Questions</div>
-        <input type="number" id="num-questions" value="10" min="3" max="25" />
-      </div>
-      <div class="field field-grow">
-        <div class="field-label">Difficulty</div>
-        <select id="difficulty">
-          <option value="easy">Easy</option>
-          <option value="standard" selected>Standard</option>
-          <option value="challenging">Challenging</option>
-          <option value="certification">Certification</option>
-        </select>
-      </div>
-      <div class="field">
-        <button class="btn btn-primary" onclick="generateQuiz()">Generate ⚡</button>
-      </div>
+    <div class="modal-acts" id="scope-modal-acts" style="display:none">
+      <button class="btn btn-primary" onclick="supplementAll()">Supplement All</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Skip</button>
     </div>
-    <div class="error-box" id="quiz-error"></div>
-  </div>
-
-  <!-- Flashcard settings -->
-  <div class="card a3" id="fc-settings" style="display:none">
-    <div class="card-label">Flashcard Settings</div>
-    <div class="settings-row">
-      <div class="field">
-        <div class="field-label">Cards</div>
-        <input type="number" id="num-cards" value="15" min="5" max="40" />
-      </div>
-      <div class="field">
-        <button class="btn btn-primary" onclick="generateFlashcards()">Generate 🃏</button>
-      </div>
-    </div>
-    <div class="error-box" id="fc-error"></div>
-  </div>
-
-</div><!-- /setup -->
-
-<!-- ══════════════════════════════════════════
-     LOADING SCREEN
-══════════════════════════════════════════ -->
-<div id="screen-loading" class="screen">
-  <div class="loading-screen">
-    <div class="loading-ring">
-      <svg viewBox="0 0 56 56">
-        <defs>
-          <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#8b5cf6"/>
-            <stop offset="100%" stop-color="#ec4899"/>
-          </linearGradient>
-        </defs>
-        <circle class="track" cx="28" cy="28" r="24"/>
-        <circle class="arc" cx="28" cy="28" r="24" stroke="url(#ring-grad)"/>
-      </svg>
-    </div>
-    <div class="loading-title" id="loading-title">Building your quiz…</div>
-    <div class="loading-step" id="loading-step">Reading your content</div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     QUIZ SCREEN
-══════════════════════════════════════════ -->
-<div id="screen-quiz" class="screen">
-  <div class="progress-header">
-    <span class="progress-label" id="q-progress-label">Question 1 of 10</span>
-    <button class="btn btn-ghost" onclick="exitToSetup()">✕ Exit</button>
-  </div>
-  <div class="progress-track">
-    <div class="progress-fill active" id="q-progress-fill" style="width:0%"></div>
-  </div>
-  <div id="question-area"></div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     RESULTS SCREEN
-══════════════════════════════════════════ -->
-<div id="screen-results" class="screen">
-
-  <div class="results-hero">
-    <div class="results-emoji" id="res-emoji">🎉</div>
-    <div class="results-title" id="res-title">Quiz Complete!</div>
-    <div class="results-sub" id="res-sub">Here's how you did</div>
-    <div class="score-pill">
-      <div class="score-dot" id="res-score-dot"></div>
-      <span id="res-score-text"></span>
-    </div>
-  </div>
-
-  <!-- Delta / concept banner (targeted retry results) -->
-  <div class="delta-banner" id="delta-banner">
-    <div class="delta-banner-title">📍 Targeted concepts this round</div>
-    <div class="delta-concepts" id="delta-concepts"></div>
-  </div>
-
-  <!-- Suggest full re-quiz banner (>20 questions needed) -->
-  <div class="suggest-full-banner" id="suggest-full-banner">
-    <div class="suggest-full-title">💡 You've covered a lot of ground</div>
-    <div class="suggest-full-sub">You had more than 7 missed concepts — a full fresh quiz on this material will reinforce everything more effectively than a targeted set right now.</div>
-    <button class="btn btn-emerald btn-full" onclick="tryAgain()">🔄 Generate Full Quiz on This Topic</button>
-  </div>
-
-  <!-- Study guide -->
-  <div class="sg-section" id="sg-section" style="display:none">
-    <div class="sg-trigger">
-      <button class="btn btn-emerald btn-full" id="sg-btn" onclick="generateStudyGuide()">
-        📖 Generate Study Guide for Missed Topics
-      </button>
-      <div class="sg-trigger-sub">Claude explains what you missed in plain terms</div>
-    </div>
-    <div class="sg-panel" id="sg-panel" style="display:none">
-      <div class="sg-panel-head" onclick="toggleSgPanel()">
-        <span style="font-size:18px">📖</span>
-        <div class="sg-panel-head-text">
-          <div class="sg-panel-title">Study Guide — Missed Topics</div>
-          <div class="sg-panel-sub" id="sg-panel-sub">Click to expand</div>
-        </div>
-        <span class="sg-chevron">⌄</span>
-      </div>
-      <div class="sg-body">
-        <div class="sg-inner" id="sg-output"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Targeted retry -->
-  <div id="targeted-retry-section" style="display:none;margin-bottom:16px;animation:fadeUp .4s ease both">
-    <button class="btn btn-amber btn-full" id="targeted-retry-btn" onclick="startTargetedRetry()">
-      🎯 Practice My Weak Areas
-    </button>
-    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px" id="targeted-retry-sub"></div>
-  </div>
-
-  <!-- Review list -->
-  <div class="review-list" id="review-list"></div>
-
-  <!-- Actions -->
-  <div class="results-actions">
-    <button class="btn btn-primary btn-full" onclick="tryAgain()">🔄 New Questions, Same Topic</button>
-    <div class="results-actions-row">
-      <button class="btn btn-secondary" onclick="saveQuizSession()">💾 Save</button>
-      <button class="btn btn-secondary" onclick="exitToSetup()">📝 New Content</button>
-    </div>
-  </div>
-
-</div><!-- /results -->
-
-<!-- ══════════════════════════════════════════
-     FLASHCARD SCREEN
-══════════════════════════════════════════ -->
-<div id="screen-flashcard" class="screen">
-
-  <div class="fc-header">
-    <span class="fc-counter" id="fc-counter">Card 1 of 15</span>
-    <button class="btn btn-ghost" onclick="exitToSetup()">✕ Exit</button>
-  </div>
-  <div class="progress-track">
-    <div class="progress-fill active" id="fc-progress-fill" style="width:0%"></div>
-  </div>
-
-  <div class="flashcard-scene" onclick="flipCard()">
-    <div class="flashcard" id="flashcard">
-      <div class="fc-face fc-front">
-        <div class="fc-label">Definition</div>
-        <div class="fc-text" id="fc-front-text">Loading…</div>
-        <div class="fc-tap-hint">Tap to reveal the term</div>
-      </div>
-      <div class="fc-face fc-back">
-        <div class="fc-label">Term</div>
-        <div class="fc-text" id="fc-back-text">…</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="fc-nav">
-    <button class="fc-nav-btn" id="fc-prev" onclick="fcNav(-1)" disabled>‹</button>
-    <span class="fc-pos" id="fc-pos">1 / 15</span>
-    <button class="fc-nav-btn" id="fc-next" onclick="fcNav(1)">›</button>
-  </div>
-
-  <div class="fc-actions">
-    <button class="btn btn-primary btn-full" onclick="shuffleRestart()">🔀 Shuffle & Restart</button>
-    <div class="fc-actions-row">
-      <button class="btn btn-secondary" onclick="saveFcSession()">💾 Save</button>
-      <button class="btn btn-secondary" onclick="exitToSetup()">📝 New Content</button>
-    </div>
-  </div>
-
-</div><!-- /flashcard -->
-
-</div><!-- /app -->
-
-<!-- ══════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════ -->
 <script>
+
+// ══════════════════════════════════════════════════
+// API KEY HELPERS
+// ══════════════════════════════════════════════════
+function getApiKey() {
+  return document.getElementById('api-key').value.trim() ||
+         document.getElementById('admin-key').value.trim();
+}
+function onAdminKey() {
+  const v = document.getElementById('admin-key').value.trim();
+  document.getElementById('admin-dot').className = 'api-dot' + (v.startsWith('sk-ant') ? ' live' : '');
+}
+let adminKeyVis = false;
+function toggleAdminKey() {
+  adminKeyVis = !adminKeyVis;
+  const el = document.getElementById('admin-key');
+  el.type = adminKeyVis ? 'text' : 'password';
+  el.nextElementSibling.textContent = adminKeyVis ? '\U0001F648' : '\U0001F441';
+}
+
+// ══════════════════════════════════════════════════
+// CONTENT TAB SWITCH
+// ══════════════════════════════════════════════════
+function switchContentTab(t) {
+  document.getElementById('ctab-paste').classList.toggle('active', t === 'paste');
+  document.getElementById('ctab-upload').classList.toggle('active', t === 'upload');
+  document.getElementById('cpanel-paste').classList.toggle('active', t === 'paste');
+  document.getElementById('cpanel-upload').classList.toggle('active', t === 'upload');
+}
+function getContent() {
+  if (document.getElementById('cpanel-paste').classList.contains('active')) {
+    return document.getElementById('content-text').value.trim();
+  }
+  return savedContent;
+}
+
+// ══════════════════════════════════════════════════
+// SCOPE CHECK
+// ══════════════════════════════════════════════════
+function syncScopeToggle(src) {
+  const qEl = document.getElementById('scope-toggle-quiz');
+  const sEl = document.getElementById('scope-toggle-settings');
+  const val = src === 'quiz' ? qEl.checked : sEl.checked;
+  qEl.checked = val; sEl.checked = val;
+  fullScopeOn = val;
+  if (val && !scopeData) runScopeCheck();
+}
+
+async function runScopeCheck() {
+  const key = getApiKey();
+  if (!key || !key.startsWith('sk-ant')) { alert('Please enter your API key first.'); return; }
+  const content = studyFile ? studyFile.notes_md : getContent();
+  const unit = studyFile ? studyFile.unit : 'this topic';
+  if (!content || content.length < 20) return;
+
+  document.getElementById('scope-modal').style.display = 'flex';
+  document.getElementById('scope-modal-sub').textContent = 'Comparing your notes against standard curriculum for "' + unit + '".';
+  document.getElementById('scope-modal-acts').style.display = 'none';
+
+  try {
+    const raw = await callClaude(
+      'Analyze the following study material for the unit: "' + unit + '".\nReturn ONLY a JSON object:\n{"covered_concepts":["concept1"],"missing_concepts":[{"concept":"name","reason":"why tested"}],"coverage_score":72}\nJSON only.\nMATERIAL:\n' + content.slice(0, 8000),
+      800
+    );
+    scopeData = parseJSON(raw);
+    if (studyFile) { studyFile.scope_check = scopeData; }
+    updateScopeBar();
+    renderScopeModal();
+  } catch(err) {
+    document.getElementById('scope-modal-body').innerHTML = '<div style="color:#fda4af;font-size:13px;padding:20px 0">\u26A0\uFE0F Scope check failed: ' + err.message + '</div>';
+    document.getElementById('scope-modal-acts').style.display = 'flex';
+    document.getElementById('scope-modal-acts').innerHTML = '<button class="btn btn-secondary btn-full" onclick="closeModal()">Close</button>';
+  }
+}
+
+function renderScopeModal() {
+  if (!scopeData) return;
+  const covered = scopeData.covered_concepts || [];
+  const missing = scopeData.missing_concepts || [];
+  let html = '';
+  if (covered.length) {
+    html += '<div style="font-size:12px;font-weight:700;color:var(--emerald);margin-bottom:7px;letter-spacing:1px;text-transform:uppercase">\u2705 Covered (' + covered.length + ')</div>';
+    html += '<div class="scope-concept-list">' + covered.map(c => '<div class="scope-concept-item covered"><div class="scope-concept-text"><div class="scope-concept-name">' + esc(c) + '</div></div></div>').join('') + '</div>';
+  }
+  if (missing.length) {
+    html += '<div style="font-size:12px;font-weight:700;color:var(--amber);margin:14px 0 7px;letter-spacing:1px;text-transform:uppercase">\u26A0\uFE0F Missing (' + missing.length + ')</div>';
+    html += '<div class="scope-concept-list">' + missing.map((m, i) =>
+      '<div class="scope-concept-item missing" id="scope-item-' + i + '"><div class="scope-concept-text"><div class="scope-concept-name">' + esc(m.concept) + '</div><div class="scope-concept-reason">' + esc(m.reason || '') + '</div></div>' +
+      '<button class="scope-add-btn' + (supplemented.includes(m.concept) ? ' added' : '') + '" id="scope-add-' + i + '" onclick="toggleSupplement(' + i + ',\'' + esc(m.concept) + '\')">' +
+      (supplemented.includes(m.concept) ? '\u2705 Added' : '+ Add') + '</button></div>'
+    ).join('') + '</div>';
+  }
+  document.getElementById('scope-modal-body').innerHTML = html;
+  document.getElementById('scope-modal-acts').style.display = missing.length ? 'flex' : 'none';
+  updateScopeBar();
+}
+
+function toggleSupplement(idx, concept) {
+  const i = supplemented.indexOf(concept);
+  if (i === -1) supplemented.push(concept);
+  else supplemented.splice(i, 1);
+  const btn = document.getElementById('scope-add-' + idx);
+  if (btn) {
+    btn.textContent = supplemented.includes(concept) ? '\u2705 Added' : '+ Add';
+    btn.classList.toggle('added', supplemented.includes(concept));
+  }
+}
+function supplementAll() {
+  supplemented = (scopeData?.missing_concepts || []).map(m => m.concept);
+  renderScopeModal();
+  closeModal();
+}
+function updateScopeBar() {
+  if (!scopeData) return;
+  const pct = scopeData.coverage_score || 0;
+  document.getElementById('settings-scope-bar').style.display = 'block';
+  document.getElementById('settings-scope-fill').style.width = pct + '%';
+  document.getElementById('settings-scope-label').textContent = 'Coverage: ' + pct + '%';
+  document.getElementById('scope-coverage-inline').textContent = '\u00B7 ' + pct + '% covered';
+}
+function closeModal() { document.getElementById('scope-modal').style.display = 'none'; }
+function closeModalOutside(e) { if (e.target === document.getElementById('scope-modal')) closeModal(); }
+
+
 // ─── PDF.js worker ───────────────────────────────────────────────
 if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -1900,8 +2143,16 @@ function loadSession(e) {
   reader.onload = ev => {
     try {
       const s = JSON.parse(ev.target.result);
+      // Study file (admin-generated): has version + unit, no type field
+      if (s.version === 2 && s.unit && !s.type) {
+        loadStudyFile(s);
+        switchTab('quiz');
+        showScreen('screen-setup');
+        return;
+      }
+
       if (!s.type) throw new Error('Invalid session file.');
-      if (s.apiKey) { keyInput.value = s.apiKey; apiDot.className = 'api-dot' + (s.apiKey.startsWith('sk-ant') ? ' live' : ''); }
+      if (s.apiKey) { keyEl.value = s.apiKey; apiDot.className = 'api-dot' + (s.apiKey.startsWith('sk-ant') ? ' live' : ''); }
       if (s.content) { document.getElementById('content-text').value = s.content; savedContent = s.content; }
 
       if (s.type === 'quiz') {
@@ -1927,6 +2178,165 @@ function loadSession(e) {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════
+// ESC HELPER
+// ══════════════════════════════════════════════════
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════
+// ADMIN — GENERATE STUDY FILE
+// ══════════════════════════════════════════════════
+async function adminGenerate() {
+  const key = document.getElementById('admin-key').value.trim() || keyEl.value.trim();
+  const unit = document.getElementById('admin-unit').value.trim();
+  const notes = document.getElementById('admin-notes').value.trim();
+  const errEl = document.getElementById('admin-err');
+  hideErr('admin-err');
+
+  if (!key || !key.startsWith('sk-ant')) return showErr('admin-err', 'Please enter a valid Anthropic API key.');
+  if (!unit) return showErr('admin-err', 'Please enter a unit name.');
+  if (!notes || notes.length < 20) return showErr('admin-err', 'Please paste some study notes.');
+
+  const btn = document.querySelector('#tab-admin .btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spin"></span> Analyzing…';
+
+  let sc = null;
+  try {
+    const raw = await callClaude(
+      `Analyze the following study material for the unit: "${unit}".\nReturn ONLY a JSON object:\n{"covered_concepts":["concept1"],"missing_concepts":[{"concept":"name","reason":"why tested"}],"coverage_score":72}\nJSON only, no explanation.\nMATERIAL:\n${notes.slice(0, 8000)}`,
+      800
+    );
+    sc = parseJSON(raw);
+  } catch(e) {
+    // Scope check optional — continue without it
+  }
+
+  const fileObj = {
+    version: 2,
+    unit,
+    created: today(),
+    last_modified: today(),
+    last_compiled: null,
+    notes_md: notes,
+    scope_check: sc,
+    questions: []
+  };
+
+  const fname = `studypulse-${unit.toLowerCase().replace(/\s+/g, '-').slice(0, 30)}-${stamp()}.json`;
+  downloadJSON(fname, fileObj);
+
+  btn.disabled = false;
+  btn.innerHTML = '✅ File Generated — Check Downloads';
+  setTimeout(() => { btn.innerHTML = 'Generate Study File ⚡'; }, 3000);
+}
+
+// ══════════════════════════════════════════════════
+// LOAD STUDY FILE (from session JSON)
+// ══════════════════════════════════════════════════
+function loadStudyFile(s) {
+  studyFile = s;
+  fileModified = false;
+
+  // Populate API key if present
+  if (s.apiKey) {
+    keyEl.value = s.apiKey;
+    apiDot.className = 'api-dot' + (s.apiKey.startsWith('sk-ant') ? ' live' : '');
+  }
+
+  // Set saved content
+  savedContent = s.notes_md || '';
+  document.getElementById('content-text').value = savedContent;
+
+  // Show scope toggle in quiz settings
+  document.getElementById('scope-toggle-row').style.display = 'block';
+
+  // Restore scope data if present
+  if (s.scope_check) {
+    scopeData = s.scope_check;
+    updateScopeBar();
+  }
+
+  // Notes tab
+  document.getElementById('notes-empty').style.display = 'none';
+  document.getElementById('notes-content').style.display = 'block';
+  document.getElementById('notes-textarea').value = s.notes_md || '';
+  document.getElementById('notes-file-name').textContent = s.unit || 'Untitled Unit';
+  document.getElementById('notes-file-meta').textContent =
+    `Created ${s.created || '—'} · Modified ${s.last_modified || '—'}`;
+
+  // Settings file info
+  document.getElementById('settings-file-info').innerHTML = `
+    <div class="file-info" style="margin-bottom:0;background:transparent;border:none;padding:0">
+      <div class="file-info-icon">📄</div>
+      <div class="file-info-detail">
+        <div class="file-info-name">${esc(s.unit || 'Untitled')}</div>
+        <div class="file-info-meta">Created ${esc(s.created || '—')} · Coverage: ${s.scope_check?.coverage_score || 0}%</div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
+// NOTES TAB — AUTO-SAVE
+// ══════════════════════════════════════════════════
+function onNotesInput() {
+  if (!studyFile) return;
+  fileModified = true;
+  const dot = document.getElementById('notes-dot');
+  const statusTxt = document.getElementById('notes-status-text');
+  dot.className = 'notes-dot saving';
+  statusTxt.textContent = 'Unsaved changes…';
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    saveNotes();
+  }, 2000);
+}
+
+function saveNotes() {
+  if (!studyFile) return;
+  const val = document.getElementById('notes-textarea').value;
+  studyFile.notes_md = val;
+  studyFile.last_modified = today();
+  savedContent = val;
+  document.getElementById('content-text').value = val;
+  fileModified = false;
+  const dot = document.getElementById('notes-dot');
+  const statusTxt = document.getElementById('notes-status-text');
+  dot.className = 'notes-dot saved';
+  statusTxt.textContent = 'Saved ✓';
+  setTimeout(() => {
+    dot.className = 'notes-dot';
+    statusTxt.textContent = 'Ready';
+  }, 2500);
+}
+
+function downloadFile() {
+  if (!studyFile) return;
+  saveNotes();
+  const fname = `studypulse-${(studyFile.unit || 'notes').toLowerCase().replace(/\s+/g, '-').slice(0, 30)}-${stamp()}.json`;
+  downloadJSON(fname, studyFile);
+}
+
+function copyJson() {
+  if (!studyFile) return;
+  saveNotes();
+  navigator.clipboard.writeText(JSON.stringify(studyFile, null, 2))
+    .then(() => alert('JSON copied to clipboard. Paste into a .json file.'))
+    .catch(() => alert('Copy failed — use the Download button instead.'));
+}
+
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Before-unload warning when notes unsaved
+window.addEventListener('beforeunload', e => {
+  if (fileModified) { e.preventDefault(); e.returnValue = ''; }
+});
+
 function exitToSetup() {
   questions = []; userAnswers = []; currentQ = 0; answered = false;
   flashcards = []; fcIndex = 0; fcFlipped = false;
@@ -1959,6 +2369,7 @@ function stamp() {
   const d = new Date();
   return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
 }
+
 </script>
 </body>
 </html>
