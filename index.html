@@ -583,7 +583,41 @@ textarea{resize:vertical;min-height:180px;line-height:1.65;font-size:14px;}
     </div>
   </div>
   <div class="card a2"><div class="card-label">Unit Name</div><input type="text" id="admin-unit" placeholder="e.g. Cell Division and Cell Differentiation"/></div>
-  <div class="card a2"><div class="card-label">Study Notes (Markdown)</div><textarea id="admin-notes" placeholder="Paste study material in markdown&#x2026;"></textarea></div>
+  <div class="card a2">
+      <div class="card-label">Study Notes</div>
+      <div class="content-tabs">
+        <button class="content-tab active" id="admin-ctab-paste" onclick="switchAdminCtab('paste')">&#x270F;&#xFE0F; Paste Text</button>
+        <button class="content-tab" id="admin-ctab-upload" onclick="switchAdminCtab('upload')">&#x1F4CE; Upload File</button>
+      </div>
+      <div class="ctab-panel active" id="admin-cpanel-paste">
+        <textarea id="admin-notes" placeholder="Paste study material in markdown&#x2026;"></textarea>
+      </div>
+      <div class="ctab-panel" id="admin-cpanel-upload">
+        <div class="upload-zone">
+          <input type="file" id="admin-upload-file" accept="image/*,.pdf" onchange="handleAdminUpload(event)"/>
+          <div class="upload-icon">&#x1F4C4;</div>
+          <div class="upload-title">Tap to upload PDF or image</div>
+          <div class="upload-sub">PDF &#xB7; JPG &#xB7; PNG &#xB7; HEIC &#x2014; text extracted locally, free</div>
+        </div>
+        <div class="ocr-progress" id="admin-ocr-progress">
+          <div class="ocr-bar-wrap"><div class="ocr-bar" id="admin-ocr-bar"></div></div>
+          <div class="ocr-lbl" id="admin-ocr-lbl">Initializing&#x2026;</div>
+        </div>
+        <div class="extracted-preview" id="admin-extracted-preview">
+          <div class="extracted-hdr">
+            <span class="extracted-ok">&#x2705; Text extracted</span>
+            <span class="extracted-chars" id="admin-extracted-chars">0 chars</span>
+          </div>
+          <div class="extracted-txt" id="admin-extracted-txt"></div>
+        </div>
+        <div class="ocr-fallback" id="admin-ocr-fallback">
+          <div class="ocr-fallback-row">
+            <span>&#x26A0;&#xFE0F; OCR captured little text &#x2014; image may be low quality.</span>
+            <button class="btn btn-sm" style="background:var(--grad-main);color:#fff;font-size:12px;min-height:36px;padding:8px 14px;" onclick="adminVisionFallback()">Try Claude Vision</button>
+          </div>
+        </div>
+      </div>
+    </div>
   <div class="card a3"><button class="btn btn-primary btn-full" onclick="adminGenerate()">Generate Study File &#x26A1;</button></div>
   <div class="err-box" id="admin-err"></div>
 </div>
@@ -624,11 +658,13 @@ let multiSel=new Set();
 // V2
 let isTargetedRetry=false,targetedConcepts=[],origScore=null;
 let pendingVisionFile=null,stepTimer=null;
+let pendingAdminVisionFile=null,adminExtractedContent='';
 
 // ── TAB / MODE ─────────────────────────────────────────────────────
 function switchTab(t){currentTab=t;document.querySelectorAll('.tab-screen').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');document.getElementById('tb-'+t).classList.add('active');window.scrollTo(0,0);}
 function setMode(m){appMode=m;document.getElementById('mode-quiz-btn').classList.toggle('active',m==='quiz');document.getElementById('mode-fc-btn').classList.toggle('active',m==='flashcard');document.getElementById('quiz-settings').style.display=m==='quiz'?'block':'none';document.getElementById('fc-settings').style.display=m==='flashcard'?'block':'none';}
 function switchCtab(t){document.getElementById('ctab-paste').classList.toggle('active',t==='paste');document.getElementById('ctab-upload').classList.toggle('active',t==='upload');document.getElementById('cpanel-paste').classList.toggle('active',t==='paste');document.getElementById('cpanel-upload').classList.toggle('active',t==='upload');}
+function switchAdminCtab(t){document.getElementById('admin-ctab-paste').classList.toggle('active',t==='paste');document.getElementById('admin-ctab-upload').classList.toggle('active',t==='upload');document.getElementById('admin-cpanel-paste').classList.toggle('active',t==='paste');document.getElementById('admin-cpanel-upload').classList.toggle('active',t==='upload');}
 
 // ── API KEY ────────────────────────────────────────────────────────
 const keyEl=document.getElementById('api-key');
@@ -701,6 +737,39 @@ async function visionFallback(){
     document.getElementById('extracted-txt').textContent=savedContent.slice(0,400)+(savedContent.length>400?'…':'');
     document.getElementById('extracted-chars').textContent=savedContent.length.toLocaleString()+' chars (via Vision)';
     document.getElementById('extracted-preview').style.display='block';fb.style.display='none';
+  }catch(err){fb.innerHTML=`<span>⚠️ Vision failed: ${err.message}</span>`;}
+}
+function handleAdminUpload(e){
+  const file=e.target.files[0];if(!file)return;
+  pendingAdminVisionFile=null;
+  const prog=document.getElementById('admin-ocr-progress'),bar=document.getElementById('admin-ocr-bar'),lbl=document.getElementById('admin-ocr-lbl');
+  const prev=document.getElementById('admin-extracted-preview'),fb=document.getElementById('admin-ocr-fallback');
+  prev.style.display='none';fb.style.display='none';prog.style.display='block';bar.style.width='0%';
+  (file.type==='application/pdf'?extractPDF(file,bar,lbl):extractImg(file,bar,lbl))
+    .then(text=>{
+      prog.style.display='none';
+      if(text.trim().length<200){pendingAdminVisionFile=file;fb.style.display='block';}
+      if(text.trim().length>0){
+        adminExtractedContent=text.trim();
+        document.getElementById('admin-extracted-txt').textContent=adminExtractedContent.slice(0,400)+(adminExtractedContent.length>400?'…':'');
+        document.getElementById('admin-extracted-chars').textContent=adminExtractedContent.length.toLocaleString()+' chars';
+        prev.style.display='block';
+      }
+    })
+    .catch(err=>{prog.style.display='none';showErr(document.getElementById('admin-err'),'⚠️ File read failed: '+err.message);});
+  e.target.value='';
+}
+async function adminVisionFallback(){
+  if(!pendingAdminVisionFile)return;
+  const key=getKey();if(!key||!key.startsWith('sk-ant')){alert('Please enter your API key first.');return;}
+  const fb=document.getElementById('admin-ocr-fallback');fb.innerHTML='<span>⏳ Sending to Claude Vision…</span>';
+  try{
+    const b64=await fileToB64(pendingAdminVisionFile);const mime=pendingAdminVisionFile.type||'image/jpeg';
+    const text=await claude(key,'Extract all readable text from this image. Return only the extracted text, nothing else.',2048,b64,mime);
+    adminExtractedContent=text.trim();
+    document.getElementById('admin-extracted-txt').textContent=adminExtractedContent.slice(0,400)+(adminExtractedContent.length>400?'…':'');
+    document.getElementById('admin-extracted-chars').textContent=adminExtractedContent.length.toLocaleString()+' chars (via Vision)';
+    document.getElementById('admin-extracted-preview').style.display='block';fb.style.display='none';
   }catch(err){fb.innerHTML=`<span>⚠️ Vision failed: ${err.message}</span>`;}
 }
 function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Read failed'));r.readAsDataURL(file);});}
@@ -1002,11 +1071,12 @@ function applyFile(){
 async function adminGenerate(){
   const key=document.getElementById('admin-key').value.trim()||keyEl.value.trim();
   const unit=document.getElementById('admin-unit').value.trim();
-  const notes=document.getElementById('admin-notes').value.trim();
+  const uploadActive=document.getElementById('admin-cpanel-upload').classList.contains('active');
+  const notes=uploadActive?adminExtractedContent:document.getElementById('admin-notes').value.trim();
   const err=document.getElementById('admin-err');err.classList.remove('show');
   if(!key||!key.startsWith('sk-ant'))return showErr(err,'Please enter a valid Anthropic API key.');
   if(!unit)return showErr(err,'Please enter a unit name.');
-  if(!notes||notes.length<20)return showErr(err,'Please paste study notes.');
+  if(!notes||notes.length<20)return showErr(err,uploadActive?'Please upload a file first — no text was extracted.':'Please paste study notes.');
   const btn=document.querySelector('#tab-admin .btn-primary');btn.disabled=true;btn.innerHTML='<span class="btn-spin"></span> Analysing…';
   let sc=null;
   try{const raw=await claude(key,`Analyze study material for unit: "${unit}". Return ONLY JSON: {"covered_concepts":["c1"],"missing_concepts":[{"concept":"name","reason":"why tested"}],"coverage_score":72}\nJSON only.\nMATERIAL:\n${notes.slice(0,8000)}`,800);sc=parseJSON(raw);}catch(e){}
